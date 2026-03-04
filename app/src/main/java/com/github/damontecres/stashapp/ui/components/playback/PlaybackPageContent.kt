@@ -505,6 +505,7 @@ fun PlaybackPageContent(
     var showPlaylist by remember { mutableStateOf(false) }
     var contentScale by remember { mutableStateOf(ContentScale.Fit) }
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
+    var repeatOneEnabled by remember { mutableStateOf(false) }
     LaunchedEffect(playbackSpeed) { player.setPlaybackSpeed(playbackSpeed) }
 
     val presentationState = rememberPresentationState(player)
@@ -943,6 +944,12 @@ fun PlaybackPageContent(
                             PlaybackAction.ShowSceneDetails -> {
                                 showSceneDetails = true
                             }
+
+                            PlaybackAction.ToggleRepeatOne -> {
+                                repeatOneEnabled = !repeatOneEnabled
+                                player.repeatMode =
+                                    if (repeatOneEnabled) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+                            }
                         }
                     },
                     onSeekBarChange = seekBarState::onValueChange,
@@ -984,6 +991,7 @@ fun PlaybackPageContent(
                     videoDecoder = videoDecoder,
                     audioDecoder = audioDecoder,
                     spriteData = spriteImageLoaded,
+                    repeatOneEnabled = repeatOneEnabled,
                 )
             }
         }
