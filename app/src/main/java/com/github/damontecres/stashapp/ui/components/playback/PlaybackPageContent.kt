@@ -43,7 +43,10 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Icon
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -639,6 +642,15 @@ fun PlaybackPageContent(
     var showPlaylist by remember { mutableStateOf(false) }
     var contentScale by remember { mutableStateOf(ContentScale.Fit) }
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
+    var repeatOneEnabled by remember { mutableStateOf(false) }
+    var showThumbnail by remember { mutableStateOf(false) }
+    var showRepeatIndicator by remember { mutableStateOf(false) }
+    LaunchedEffect(showRepeatIndicator) {
+        if (showRepeatIndicator) {
+            delay(1500)
+            showRepeatIndicator = false
+        }
+    }
     LaunchedEffect(playbackSpeed) { player.setPlaybackSpeed(playbackSpeed) }
 
     val presentationState = rememberPresentationState(player)
@@ -849,6 +861,20 @@ fun PlaybackPageContent(
                 nextWithUpDown = nextWithUpDown,
                 controllerViewState = controllerViewState,
                 updateSkipIndicator = updateSkipIndicator,
+                onWillSeekToNext = {
+                    player.pause()
+                    showThumbnail = true
+                },
+                onWillSeekToPrevious = {
+                    player.pause()
+                    showThumbnail = true
+                },
+                onLongPressEnter = {
+                    repeatOneEnabled = !repeatOneEnabled
+                    player.repeatMode =
+                        if (repeatOneEnabled) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+                    showRepeatIndicator = true
+                },
             )
         }
     val mobileTouchGesturesEnabled = isNotTvDevice && uiConfig.preferences.playbackPreferences.mobileTouchGestures
@@ -943,6 +969,23 @@ fun PlaybackPageContent(
             )
         }
 
+        if (showRepeatIndicator) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(
+                        if (repeatOneEnabled) R.drawable.baseline_repeat_one_24
+                        else R.drawable.baseline_repeat_24,
+                    ),
+                    contentDescription = null,
+                    modifier = Modifier.size(80.dp),
+                    tint = Color.White.copy(alpha = 0.7f),
+                )
+            }
+        }
+
         currentScene?.let {
             AnimatedVisibility(
                 controllerViewState.controlsVisible,
@@ -1014,6 +1057,12 @@ fun PlaybackPageContent(
                             PlaybackAction.ShowSceneDetails -> {
                                 showSceneDetails = true
                             }
+
+                            PlaybackAction.ToggleRepeatOne -> {
+                                repeatOneEnabled = !repeatOneEnabled
+                                player.repeatMode =
+                                    if (repeatOneEnabled) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+                            }
                         }
                     },
                     onSeekBarChange = seekBarState::onValueChange,
@@ -1055,6 +1104,7 @@ fun PlaybackPageContent(
                     videoDecoder = videoDecoder,
                     audioDecoder = audioDecoder,
                     spriteData = spriteImageLoaded,
+                    repeatOneEnabled = repeatOneEnabled,
                 )
             }
         }
@@ -1192,6 +1242,9 @@ class PlaybackKeyHandler(
     private val nextWithUpDown: Boolean,
     private val controllerViewState: ControllerViewState,
     private val updateSkipIndicator: (Long) -> Unit,
+    private val onWillSeekToNext: () -> Unit = {},
+    private val onWillSeekToPrevious: () -> Unit = {},
+    private val onLongPressEnter: () -> Unit = {},
 ) {
     private var keyDownKey: Key? = null
     private var holdActionTriggered = false
@@ -1218,6 +1271,16 @@ class PlaybackKeyHandler(
                     }
                 }
                 result = true
+            } else if (nextWithUpDown && !controllerViewState.controlsVisible && it.key == Key.DirectionCenter) {
+                val repeatCount = it.nativeKeyEvent.repeatCount
+                if (keyDownKey == null) {
+                    keyDownKey = Key.DirectionCenter
+                    holdActionTriggered = false
+                } else if (keyDownKey == Key.DirectionCenter && !holdActionTriggered && repeatCount >= 2) {
+                    holdActionTriggered = true
+                    onLongPressEnter()
+                }
+                result = true
             } else {
                 result = false
             }
@@ -1237,6 +1300,15 @@ class PlaybackKeyHandler(
                     holdActionTriggered = false
                     if (!wasHeld) {
                         // Only show player controls if it was a short press (not a hold)
+                        controllerViewState.showControls()
+                    }
+                } else if (nextWithUpDown && it.key == Key.DirectionCenter) {
+                    val wasHeld = keyDownKey == Key.DirectionCenter && holdActionTriggered
+                    if (keyDownKey == Key.DirectionCenter) {
+                        keyDownKey = null
+                        holdActionTriggered = false
+                    }
+                    if (!wasHeld) {
                         controllerViewState.showControls()
                     }
                 } else {
@@ -1287,7 +1359,14 @@ class PlaybackKeyHandler(
                 }
             }
         } else if (it.key == Key.Enter && !controllerViewState.controlsVisible) {
-            controllerViewState.showControls()
+            val wasHeld = keyDownKey == Key.Enter && holdActionTriggered
+            if (keyDownKey == Key.Enter) {
+                keyDownKey = null
+                holdActionTriggered = false
+            }
+            if (!wasHeld) {
+                controllerViewState.showControls()
+            }
         } else if (it.key == Key.Back && controllerViewState.controlsVisible) {
             // TODO change this to a BackHandler?
             controllerViewState.hideControls()
