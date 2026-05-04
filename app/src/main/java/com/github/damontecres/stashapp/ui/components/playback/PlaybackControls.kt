@@ -108,6 +108,8 @@ sealed interface PlaybackAction {
     ) : PlaybackAction
 
     data object ToggleRepeatOne : PlaybackAction
+
+    data object DeleteScene : PlaybackAction
 }
 
 @OptIn(UnstableApi::class)
@@ -176,23 +178,41 @@ fun PlaybackControls(
                     .padding(vertical = 8.dp)
                     .fillMaxWidth(.95f),
         )
-        Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        Box(
             modifier =
                 Modifier
                     .padding(horizontal = 8.dp)
                     .fillMaxWidth(),
+            contentAlignment = Alignment.Center,
         ) {
-            LeftPlaybackButtons(
-                onControllerInteraction = onControllerInteraction,
-                onPlaybackActionClick = onPlaybackActionClick,
-                showDebugInfo = showDebugInfo,
-                oCount = oCounter,
-                moreButtonOptions = moreButtonOptions,
-                sfwMode = sfwMode,
-                modifier = Modifier,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                LeftPlaybackButtons(
+                    onControllerInteraction = onControllerInteraction,
+                    onPlaybackActionClick = onPlaybackActionClick,
+                    showDebugInfo = showDebugInfo,
+                    oCount = oCounter,
+                    moreButtonOptions = moreButtonOptions,
+                    sfwMode = sfwMode,
+                    modifier = Modifier,
+                    onDeleteScene = { onPlaybackActionClick(PlaybackAction.DeleteScene) },
+                )
+                RightPlaybackButtons(
+                    modifier = Modifier,
+                    captions = captions,
+                    onControllerInteraction = onControllerInteraction,
+                    onControllerInteractionForDialog = onControllerInteractionForDialog,
+                    onPlaybackActionClick = onPlaybackActionClick,
+                    subtitleIndex = subtitleIndex,
+                    audioOptions = audioOptions,
+                    audioIndex = audioIndex,
+                    playbackSpeed = playbackSpeed,
+                    scale = scale,
+                )
+            }
             PlaybackButtons(
                 player = playerControls,
                 initialFocusRequester = initialFocusRequester,
@@ -204,18 +224,6 @@ fun PlaybackControls(
                 isPlaylist = isPlaylist,
                 repeatOneEnabled = repeatOneEnabled,
                 onToggleRepeatOne = { onPlaybackActionClick(PlaybackAction.ToggleRepeatOne) },
-            )
-            RightPlaybackButtons(
-                modifier = Modifier,
-                captions = captions,
-                onControllerInteraction = onControllerInteraction,
-                onControllerInteractionForDialog = onControllerInteractionForDialog,
-                onPlaybackActionClick = onPlaybackActionClick,
-                subtitleIndex = subtitleIndex,
-                audioOptions = audioOptions,
-                audioIndex = audioIndex,
-                playbackSpeed = playbackSpeed,
-                scale = scale,
             )
         }
     }
@@ -320,6 +328,7 @@ fun LeftPlaybackButtons(
     oCount: Int,
     moreButtonOptions: MoreButtonOptions,
     modifier: Modifier = Modifier,
+    onDeleteScene: () -> Unit = {},
 ) {
     var showMoreOptions by remember { mutableStateOf(false) }
     Row(
@@ -356,6 +365,15 @@ fun LeftPlaybackButtons(
                 fontSize = 16.sp,
             )
         }
+        // Delete
+        PlaybackButton(
+            iconRes = R.drawable.baseline_delete_24,
+            onClick = {
+                onControllerInteraction.invoke()
+                onDeleteScene()
+            },
+            onControllerInteraction = onControllerInteraction,
+        )
     }
     if (showMoreOptions) {
         // TODO options need context about what to display
@@ -519,6 +537,9 @@ fun PlaybackButtons(
         modifier = modifier.focusGroup(),
         horizontalArrangement = Arrangement.spacedBy(buttonSpacing),
     ) {
+        if (isPlaylist) {
+            Box(modifier = Modifier.padding(8.dp).size(56.dp, 56.dp))
+        }
         PlaybackButton(
             iconRes = R.drawable.baseline_skip_previous_24,
             onClick = {
