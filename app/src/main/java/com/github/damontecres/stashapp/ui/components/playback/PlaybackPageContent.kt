@@ -84,6 +84,7 @@ import coil3.SingletonImageLoader
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.size.Scale
+import com.github.damontecres.stashapp.R
 import com.github.damontecres.stashapp.StashApplication
 import com.github.damontecres.stashapp.StashExoPlayer
 import com.github.damontecres.stashapp.api.fragment.FullSceneData
@@ -108,6 +109,7 @@ import com.github.damontecres.stashapp.ui.LocalGlobalContext
 import com.github.damontecres.stashapp.ui.compat.detectTvDevice
 import com.github.damontecres.stashapp.ui.compat.isNotTvDevice
 import com.github.damontecres.stashapp.ui.compat.isTvDevice
+import com.github.damontecres.stashapp.ui.components.DeleteDialog
 import com.github.damontecres.stashapp.ui.components.ItemOnClicker
 import com.github.damontecres.stashapp.ui.components.image.DRAG_THROTTLE_DELAY
 import com.github.damontecres.stashapp.ui.components.image.ImageFilterDialog
@@ -447,6 +449,20 @@ class PlaybackViewModel :
         }
     }
 
+    fun deleteScene(
+        deleteFiles: Boolean,
+        deleteGenerated: Boolean,
+        onDeleted: (Boolean) -> Unit,
+    ) {
+        state.value.mediaItemTag?.let { tag ->
+            viewModelScope.launch(exceptionHandler) {
+                val mutationEngine = MutationEngine(server)
+                val success = mutationEngine.deleteScene(tag.item.id, deleteFiles, deleteGenerated)
+                onDeleted(success)
+            }
+        }
+    }
+
     fun updateRating(
         sceneId: String,
         rating100: Int,
@@ -628,6 +644,7 @@ fun PlaybackPageContent(
 
     var showFilterDialog by rememberSaveable { mutableStateOf(false) }
     var showSceneDetails by rememberSaveable { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     AmbientPlayerListener(player)
 
@@ -1063,6 +1080,13 @@ fun PlaybackPageContent(
                                 player.repeatMode =
                                     if (repeatOneEnabled) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
                             }
+
+                            PlaybackAction.DeleteScene -> {
+                                playingBeforeDialog = player.isPlaying
+                                player.pause()
+                                controllerViewState.hideControls()
+                                showDeleteDialog = true
+                            }
                         }
                     },
                     onSeekBarChange = seekBarState::onValueChange,
@@ -1126,6 +1150,39 @@ fun PlaybackPageContent(
             dialogTitle = "Create marker at ${createMarkerPosition.milliseconds}?",
             dismissOnClick = false,
         )
+        if (showDeleteDialog && currentScene != null) {
+            DeleteDialog(
+                onDeleteConfirm = { deleteFiles, deleteGenerated ->
+                    showDeleteDialog = false
+                    player.stop()
+                    viewModel.deleteScene(deleteFiles, deleteGenerated) { success ->
+                        if (success) {
+                            if (player.isCommandAvailable(Player.COMMAND_SEEK_TO_NEXT)) {
+                                player.seekToNextMediaItem()
+                                player.prepare()
+                                if (playingBeforeDialog) player.play()
+                            } else {
+                                navigationManager.goBack()
+                            }
+                        } else {
+                            Toast.makeText(context, "Failed to delete scene", Toast.LENGTH_SHORT).show()
+                            player.prepare()
+                            if (playingBeforeDialog) player.play()
+                        }
+                    }
+                },
+                onDismissRequest = {
+                    showDeleteDialog = false
+                    if (playingBeforeDialog) player.play()
+                },
+                dataType = DataType.SCENE,
+                name = currentScene.item.title ?: currentScene.item.id,
+                files = emptyList(),
+                deleteFilesLabelRes = R.string.stashapp_actions_delete_file_and_funscript,
+                initialDeleteFiles = true,
+                focusDeleteButton = true,
+            )
+        }
         if (playlistPager != null && onClickPlaylistItem != null) {
             PlaylistListDialog(
                 show = showPlaylist,
