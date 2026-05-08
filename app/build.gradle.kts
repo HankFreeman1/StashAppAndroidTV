@@ -1,4 +1,5 @@
-
+import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.variant.FilterConfiguration
 import com.android.build.gradle.internal.cxx.io.writeTextIfDifferent
 import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.google.protobuf.gradle.id
@@ -11,7 +12,6 @@ val extensionsRepoActive = project.hasProperty("WholphinExtensionsUsername")
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     id("kotlin-parcelize")
     alias(libs.plugins.apollo)
@@ -33,7 +33,15 @@ val gitDescribe =
         .standardOutput.asText
         .getOrElse("v0.0.0")
 
-android {
+kotlin {
+    compilerOptions {
+        languageVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_3
+        jvmTarget = JvmTarget.JVM_11
+        javaParameters = true
+    }
+}
+
+configure<ApplicationExtension> {
     namespace = "com.github.damontecres.stashapp"
     compileSdk = 36
 
@@ -98,18 +106,6 @@ android {
                 signingConfig = signingConfigs.getByName("ci")
             }
         }
-
-        applicationVariants.all {
-            val variant = this
-            variant.outputs
-                .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
-                .forEach { output ->
-                    val abi = output.getFilter("ABI").let { if (it != null) "-$it" else "" }
-                    val outputFileName =
-                        "StashAppAndroidTV-${variant.baseName}-${variant.versionName}-${variant.versionCode}$abi.apk"
-                    output.outputFileName = outputFileName
-                }
-        }
     }
     splits {
         abi {
@@ -124,18 +120,29 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
         isCoreLibraryDesugaringEnabled = true
     }
-    kotlin {
-        compilerOptions {
-            jvmTarget = JvmTarget.JVM_11
-            javaParameters = true
-        }
-    }
     lint {
         disable.add("MissingTranslation")
         disable.add("LocalContextGetResourceValueCall") // TODO
     }
-    room {
-        schemaDirectory("$projectDir/schemas")
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
+}
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.outputs
+            .map { it as com.android.build.api.variant.impl.VariantOutputImpl }
+            .forEach { output ->
+                val abi =
+                    output
+                        .getFilter(FilterConfiguration.FilterType.ABI)
+                        .let { if (it != null) "-${it.identifier}" else "" }
+                val outputFileName =
+                    "StashAppAndroidTV-${variant.flavorName}-${variant.buildType}-${output.versionName.get()}-${output.versionCode.get()}$abi.apk"
+                output.outputFileName = outputFileName
+            }
     }
 }
 
@@ -171,11 +178,6 @@ apollo {
         packageName.set("com.github.damontecres.stashapp.api")
         schemaFile = File("$projectDir/src/main/graphql/schema.graphqls")
         generateOptionalOperationVariables.set(false)
-        outputDirConnection {
-            // Fixes where classes aren't detected in unit tests
-            // See: https://community.apollographql.com/t/android-warning-duplicate-content-roots-detected-after-just-adding-apollo3-kotlin-client/4529/6
-            connectToKotlinSourceSet("main")
-        }
         plugin(project(":apollo-compiler"))
     }
 }
