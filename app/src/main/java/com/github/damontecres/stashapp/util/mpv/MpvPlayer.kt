@@ -48,6 +48,7 @@ import com.github.damontecres.stashapp.util.mpv.MPVLib.MpvEvent.MPV_EVENT_FILE_L
 import com.github.damontecres.stashapp.util.mpv.MPVLib.MpvEvent.MPV_EVENT_PLAYBACK_RESTART
 import com.github.damontecres.stashapp.util.mpv.MPVLib.MpvEvent.MPV_EVENT_START_FILE
 import com.github.damontecres.stashapp.util.mpv.MPVLib.MpvEvent.MPV_EVENT_VIDEO_RECONFIG
+import timber.log.Timber
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.update
@@ -73,6 +74,8 @@ class MpvPlayer(
     SurfaceHolder.Callback {
     companion object {
         private const val DEBUG = false
+
+        private val initLock = Any()
     }
 
     private var surface: Surface? = null
@@ -130,7 +133,7 @@ class MpvPlayer(
         MPVLib.setOptionString("demuxer-max-back-bytes", "${cacheMegs * 1024 * 1024}")
 
         Timber.v("Initializing MPVLib")
-        MPVLib.initialize()
+        MPVLib.init()
 
         MPVLib.setOptionString("force-window", "no")
         MPVLib.setOptionString("idle", "yes")
@@ -441,7 +444,8 @@ class MpvPlayer(
 
     override fun getAudioAttributes(): AudioAttributes = throw UnsupportedOperationException()
 
-    override fun setVolume(volume: Float): Unit = throw UnsupportedOperationException()
+    override fun setVolume(volume: Float) {
+    }
 
     override fun getVolume(): Float = 1f
 
@@ -1085,14 +1089,18 @@ class MpvPlayer(
             }
 
             MpvCommand.INITIALIZE -> {
-                init()
+                synchronized(initLock) {
+                    init()
+                }
             }
 
             MpvCommand.DESTROY -> {
-                clearVideoSurfaceView(null)
-                MPVLib.removeLogObserver(mpvLogger)
-                MPVLib.tearDown()
-                Timber.d("MPVLib destroyed")
+                synchronized(initLock) {
+                    MPVLib.setPropertyBoolean("pause", true)
+                    MPVLib.removeLogObserver(mpvLogger)
+                    MPVLib.destroy()
+                    Timber.d("MPVLib destroyed")
+                }
             }
         }
     }
