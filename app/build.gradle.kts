@@ -36,7 +36,7 @@ val gitDescribe =
 kotlin {
     compilerOptions {
         languageVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_3
-        jvmTarget = JvmTarget.JVM_11
+        jvmTarget = JvmTarget.JVM_21
         javaParameters = true
     }
 }
@@ -116,8 +116,8 @@ configure<ApplicationExtension> {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
         isCoreLibraryDesugaringEnabled = true
     }
     lint {
@@ -135,13 +135,18 @@ androidComponents {
         variant.outputs
             .map { it as com.android.build.api.variant.impl.VariantOutputImpl }
             .forEach { output ->
-                val abi =
-                    output
-                        .getFilter(FilterConfiguration.FilterType.ABI)
-                        .let { if (it != null) "-${it.identifier}" else "" }
-                val outputFileName =
-                    "StashAppAndroidTV-${variant.flavorName}-${variant.buildType}-${output.versionName.get()}-${output.versionCode.get()}$abi.apk"
-                output.outputFileName = outputFileName
+                val abi = output.getFilter(FilterConfiguration.FilterType.ABI)?.identifier
+                val parts =
+                    listOf(
+                        "StashAppAndroidTV",
+                        variant.flavorName,
+                        variant.buildType,
+                        output.versionName.get(),
+                        output.versionCode.get().toString(),
+                        abi,
+                    ).filterNot { it.isNullOrBlank() }
+                val outputFileName = parts.joinToString("-")
+                output.outputFileName = "$outputFileName.apk"
             }
     }
 }
@@ -306,6 +311,8 @@ dependencies {
         implementation(libs.wholphin.extensions.mpv)
         implementation(libs.wholphin.extensions.ffmpeg)
         implementation(libs.wholphin.extensions.av1)
+    } else {
+        logger.warn("Native extensions will not be included")
     }
 
     testImplementation(libs.androidx.test.core.ktx)
