@@ -6,9 +6,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Base64
 
 val isCI = if (System.getenv("CI") != null) System.getenv("CI").toBoolean() else false
-val ffmpegModuleExists = project.file("libs/lib-decoder-ffmpeg-release.aar").exists()
-val av1ModuleExists = project.file("libs/lib-decoder-av1-release.aar").exists()
 val shouldSign = isCI && System.getenv("KEY_ALIAS") != null
+val extensionsRepoActive = project.hasProperty("WholphinExtensionsUsername")
 
 plugins {
     alias(libs.plugins.android.application)
@@ -299,11 +298,12 @@ dependencies {
     implementation(libs.multiplatform.markdown.renderer)
     implementation(libs.multiplatform.markdown.renderer.m3)
 
-    if (ffmpegModuleExists || isCI) {
-        implementation(files("libs/lib-decoder-ffmpeg-release.aar"))
-    }
-    if (av1ModuleExists || isCI) {
-        implementation(files("libs/lib-decoder-av1-release.aar"))
+    implementation(libs.timber)
+    implementation(libs.slf4j2.timber)
+    if (extensionsRepoActive) {
+        implementation(libs.wholphin.extensions.mpv)
+        implementation(libs.wholphin.extensions.ffmpeg)
+        implementation(libs.wholphin.extensions.av1)
     }
 
     testImplementation(libs.androidx.test.core.ktx)

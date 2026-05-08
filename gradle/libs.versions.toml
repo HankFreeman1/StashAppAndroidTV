@@ -51,6 +51,9 @@ tv-foundation = "1.0.0"
 tv-material = "1.1.0"
 viewpump = "4.0.15"
 zoomlayout = "1.9.0"
+slf4j2Timber = "1.2"
+timber = "5.0.1"
+wholphin-extensions = "0.1.2"
 
 [libraries]
 acra-dialog = { module = "ch.acra:acra-dialog", version.ref = "acra" }
@@ -137,6 +140,12 @@ androidx-tv-foundation = { module = "androidx.tv:tv-foundation", version.ref = "
 androidx-tv-material = { module = "androidx.tv:tv-material", version.ref = "tv-material" }
 androidx-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-ui-viewbinding = { module = "androidx.compose.ui:ui-viewbinding" }
+timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
+slf4j2-timber = { module = "uk.kulikov:slf4j2-timber", version.ref = "slf4j2Timber" }
+
+wholphin-extensions-mpv = { module = "com.github.damontecres.wholphin.mpv:wholphin-mpv", version.ref = "wholphin-extensions" }
+wholphin-extensions-ffmpeg = { module = "com.github.damontecres.wholphin.media3:decoder-ffmpeg", version.ref = "wholphin-extensions" }
+wholphin-extensions-av1 = { module = "com.github.damontecres.wholphin.media3:decoder-av1", version.ref = "wholphin-extensions" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "android-application" }

@@ -52,7 +52,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
@@ -95,10 +94,7 @@ fun PlaybackPage(
                     .getInstance(
                         context,
                         server,
-                        skipParams,
-                        httpClient.name,
-                        debugLogging,
-                        backend,
+                        uiConfig.preferences.playbackPreferences,
                     ).apply {
                         repeatMode = Player.REPEAT_MODE_OFF
                         playWhenReady = true
@@ -227,27 +223,8 @@ fun PlaylistPlaybackPage(
     if (playlist.isNotEmpty()) {
         val player =
             remember {
-                val skipForward =
-                    uiConfig.preferences.playbackPreferences.skipForwardMs.milliseconds
-                val skipBack =
-                    uiConfig.preferences.playbackPreferences.skipBackwardMs.milliseconds
-                val skipParams =
-                    if (viewModel.dataType == DataType.MARKER) {
-                        // Override the skip forward/back since many users will have default seeking values larger than the duration
-                        SkipParams.Values(
-                            (clipDuration / 4).coerceAtMost(skipForward).inWholeMilliseconds,
-                            (clipDuration / 4).coerceAtMost(skipBack).inWholeMilliseconds,
-                        )
-                    } else {
-                        SkipParams.Values(
-                            skipForward.inWholeMilliseconds,
-                            skipBack.inWholeMilliseconds,
-                        )
-                    }
-                val httpClient = uiConfig.preferences.playbackPreferences.playbackHttpClient
-                val debugLogging = uiConfig.preferences.playbackPreferences.debugLoggingEnabled
                 StashExoPlayer
-                    .getInstance(context, server, skipParams, httpClient.name, debugLogging)
+                    .getInstance(context, server, uiConfig.preferences.playbackPreferences)
                     .apply {
                         repeatMode = Player.REPEAT_MODE_OFF
                         playWhenReady = true
