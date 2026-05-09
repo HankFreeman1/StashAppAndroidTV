@@ -6,10 +6,10 @@ import com.google.protobuf.gradle.id
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Base64
 
-val isCI = providers.systemProperty("CI").orElse("false").map { it.toBoolean() }
+val isCI = providers.environmentVariable("CI").orElse("false").map { it.toBoolean() }
 val shouldSign =
     isCI.zip(
-        providers.systemProperty("KEY_ALIAS").orElse("").map { it.isNotBlank() },
+        providers.environmentVariable("KEY_ALIAS").orElse("").map { it.isNotBlank() },
     ) { isCI, hasKey ->
         isCI && hasKey
     }
