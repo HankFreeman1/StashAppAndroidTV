@@ -1120,7 +1120,7 @@ fun PlaybackPageContent(
                     playlistInfo =
                         playlistPager?.let {
                             PlaylistInfo(
-                                currentPlaylistIndex,
+                                info.currentPlaylistIndex,
                                 it.size,
                                 player.mediaItemCount,
                             )
