@@ -1311,7 +1311,7 @@ class PlaybackKeyHandler(
         if (!controlsEnabled) {
             result = false
         } else if (it.type == KeyEventType.KeyDown) {
-            if (nextWithUpDown && (it.key == Key.DirectionUp || it.key == Key.DirectionDown)) {
+            if (nextWithUpDown && !controllerViewState.controlsVisible && (it.key == Key.DirectionUp || it.key == Key.DirectionDown)) {
                 val repeatCount = it.nativeKeyEvent.repeatCount
                 if (keyDownKey == null) {
                     keyDownKey = it.key
@@ -1319,12 +1319,10 @@ class PlaybackKeyHandler(
                 } else if (keyDownKey == it.key && !holdActionTriggered && repeatCount >= 2) {
                     // Each repeat is roughly 250-300ms, so repeatCount==2 is ~500-600ms
                     holdActionTriggered = true
-                    if (!controllerViewState.controlsVisible) {
-                        if (it.key == Key.DirectionUp) {
-                            player.seekToPreviousMediaItem()
-                        } else if (it.key == Key.DirectionDown) {
-                            player.seekToNextMediaItem()
-                        }
+                    if (it.key == Key.DirectionUp) {
+                        player.seekToPreviousMediaItem()
+                    } else if (it.key == Key.DirectionDown) {
+                        player.seekToNextMediaItem()
                     }
                 }
                 result = true
