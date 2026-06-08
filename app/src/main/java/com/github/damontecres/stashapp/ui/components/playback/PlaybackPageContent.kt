@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,6 +83,7 @@ import androidx.media3.ui.compose.state.rememberPresentationState
 import androidx.media3.ui.compose.state.rememberPreviousButtonState
 import androidx.tv.material3.MaterialTheme
 import coil3.SingletonImageLoader
+import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.size.Scale
@@ -132,6 +135,7 @@ import com.github.damontecres.stashapp.util.toLongMilliseconds
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -661,6 +665,8 @@ fun PlaybackPageContent(
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
     var repeatOneEnabled by remember { mutableStateOf(false) }
     var showThumbnail by remember { mutableStateOf(false) }
+    // Set while advancing to the next item, where the player still reports the outgoing scene
+    var pendingThumbnailUrl by remember { mutableStateOf<String?>(null) }
     var showRepeatIndicator by remember { mutableStateOf(false) }
     LaunchedEffect(showRepeatIndicator) {
         if (showRepeatIndicator) {
@@ -859,6 +865,89 @@ fun PlaybackPageContent(
         skipPosition = player.currentPosition
     }
     val scope = rememberCoroutineScope()
+    DisposableEffect(player) {
+        var minShowUntil = 0L
+        var hideJob: Job? = null
+
+        fun resumeAndHide() {
+            hideJob?.cancel()
+            hideJob =
+                scope.launch {
+                    val remaining = minShowUntil - System.currentTimeMillis()
+                    if (remaining > 0) delay(remaining)
+                    showThumbnail = false
+                    pendingThumbnailUrl = null
+                    player.play()
+                }
+        }
+
+        val listener =
+            object : Player.Listener {
+                // With pauseAtEndOfMediaItems the player stops before advancing, which is the only
+                // point where the thumbnail can be raised while the surface still holds the current
+                // video. Reacting to onMediaItemTransition is too late: the next item has already
+                // rendered into the SurfaceView by the time the callback reaches the main thread.
+                override fun onPlayWhenReadyChanged(
+                    playWhenReady: Boolean,
+                    reason: Int,
+                ) {
+                    if (reason != Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM) return
+                    if (player.repeatMode == Player.REPEAT_MODE_ONE) {
+                        player.seekTo(0)
+                        player.play()
+                        return
+                    }
+                    if (!player.hasNextMediaItem()) return
+                    hideJob?.cancel()
+                    // Read the incoming scene straight off the player so the correct thumbnail is
+                    // shown right away rather than the outgoing one until currentScene catches up
+                    val nextIndex = player.nextMediaItemIndex
+                    if (nextIndex != C.INDEX_UNSET) {
+                        pendingThumbnailUrl =
+                            (player.getMediaItemAt(nextIndex).localConfiguration?.tag as? PlaylistFragment.MediaItemTag)
+                                ?.item
+                                ?.screenshotUrl
+                    }
+                    showThumbnail = true
+                    scope.launch {
+                        // Wait for the frame that draws the thumbnail to be composed and dispatched
+                        // before letting the player move on
+                        withFrameNanos { }
+                        withFrameNanos { }
+                        player.seekToNextMediaItem()
+                    }
+                }
+
+                override fun onMediaItemTransition(
+                    mediaItem: MediaItem?,
+                    reason: Int,
+                ) {
+                    if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) return
+                    hideJob?.cancel()
+                    minShowUntil = System.currentTimeMillis() + 1000L
+                    showThumbnail = true
+                    player.pause()
+                    if (player.playbackState == Player.STATE_READY) {
+                        resumeAndHide()
+                    }
+                }
+
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_READY && showThumbnail) {
+                        resumeAndHide()
+                    }
+                }
+            }
+        player.addListener(listener)
+        onDispose {
+            player.removeListener(listener)
+            (player as? ExoPlayer)?.setPauseAtEndOfMediaItems(false)
+        }
+    }
+    // Repeat-one loops seamlessly and must not be interrupted by the end-of-item pause
+    LaunchedEffect(repeatOneEnabled) {
+        (player as? ExoPlayer)?.setPauseAtEndOfMediaItems(!repeatOneEnabled)
+    }
     val playPauseState = rememberPlayPauseButtonState(player)
     val previousState = rememberPreviousButtonState(player)
     val nextState = rememberNextButtonState(player)
@@ -936,6 +1025,26 @@ fun PlaybackPageContent(
                     .matchParentSize()
                     .background(Color.Black),
             )
+        }
+        if (showThumbnail) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(Color.Black),
+            ) {
+                (pendingThumbnailUrl ?: currentScene?.item?.screenshotUrl)?.let { url ->
+                    AsyncImage(
+                        model =
+                            ImageRequest
+                                .Builder(context)
+                                .data(url)
+                                .memoryCachePolicy(CachePolicy.ENABLED)
+                                .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        imageLoader = SingletonImageLoader.get(context),
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
         }
         if (!controllerViewState.controlsVisible && skipIndicatorDuration != 0L) {
             SkipIndicator(
@@ -1023,7 +1132,10 @@ fun PlaybackPageContent(
                     markers = markers,
                     streamDecision = currentScene.streamDecision,
                     oCounter = oCount,
-                    playerControls = PlayerControlsImpl(player),
+                    playerControls = PlayerControlsImpl(player, onWillSeekToNext = {
+                        player.pause()
+                        showThumbnail = true
+                    }),
                     onPlaybackActionClick = {
                         when (it) {
                             PlaybackAction.CreateMarker -> {
@@ -1319,12 +1431,12 @@ class PlaybackKeyHandler(
                 } else if (keyDownKey == it.key && !holdActionTriggered && repeatCount >= 2) {
                     // Each repeat is roughly 250-300ms, so repeatCount==2 is ~500-600ms
                     holdActionTriggered = true
-                    if (!controllerViewState.controlsVisible) {
-                        if (it.key == Key.DirectionUp) {
-                            player.seekToPreviousMediaItem()
-                        } else if (it.key == Key.DirectionDown) {
-                            player.seekToNextMediaItem()
-                        }
+                    if (it.key == Key.DirectionUp) {
+                        onWillSeekToPrevious()
+                        player.seekToPreviousMediaItem()
+                    } else if (it.key == Key.DirectionDown) {
+                        onWillSeekToNext()
+                        player.seekToNextMediaItem()
                     }
                 }
                 result = true
@@ -1404,7 +1516,10 @@ class PlaybackKeyHandler(
                 }
 
                 Key.MediaNext -> {
-                    if (player.isCommandAvailable(Player.COMMAND_SEEK_TO_NEXT)) player.seekToNext()
+                    if (player.isCommandAvailable(Player.COMMAND_SEEK_TO_NEXT)) {
+                        onWillSeekToNext()
+                        player.seekToNext()
+                    }
                 }
 
                 Key.MediaPrevious -> {
