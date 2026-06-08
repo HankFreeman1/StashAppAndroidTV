@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -81,6 +82,7 @@ import androidx.media3.ui.compose.state.rememberPresentationState
 import androidx.media3.ui.compose.state.rememberPreviousButtonState
 import androidx.tv.material3.MaterialTheme
 import coil3.SingletonImageLoader
+import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.size.Scale
@@ -132,6 +134,7 @@ import com.github.damontecres.stashapp.util.toLongMilliseconds
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -859,6 +862,46 @@ fun PlaybackPageContent(
         skipPosition = player.currentPosition
     }
     val scope = rememberCoroutineScope()
+    DisposableEffect(player) {
+        var minShowUntil = 0L
+        var hideJob: Job? = null
+
+        fun resumeAndHide() {
+            hideJob?.cancel()
+            hideJob =
+                scope.launch {
+                    val remaining = minShowUntil - System.currentTimeMillis()
+                    if (remaining > 0) delay(remaining)
+                    showThumbnail = false
+                    player.play()
+                }
+        }
+
+        val listener =
+            object : Player.Listener {
+                override fun onMediaItemTransition(
+                    mediaItem: MediaItem?,
+                    reason: Int,
+                ) {
+                    if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) return
+                    hideJob?.cancel()
+                    minShowUntil = System.currentTimeMillis() + 2000L
+                    showThumbnail = true
+                    player.pause()
+                    if (player.playbackState == Player.STATE_READY) {
+                        resumeAndHide()
+                    }
+                }
+
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_READY && showThumbnail) {
+                        resumeAndHide()
+                    }
+                }
+            }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
     val playPauseState = rememberPlayPauseButtonState(player)
     val previousState = rememberPreviousButtonState(player)
     val nextState = rememberNextButtonState(player)
@@ -936,6 +979,26 @@ fun PlaybackPageContent(
                     .matchParentSize()
                     .background(Color.Black),
             )
+        }
+        if (showThumbnail) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(Color.Black),
+            ) {
+                currentScene?.item?.screenshotUrl?.let { url ->
+                    AsyncImage(
+                        model =
+                            ImageRequest
+                                .Builder(context)
+                                .data(url)
+                                .memoryCachePolicy(CachePolicy.ENABLED)
+                                .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        imageLoader = SingletonImageLoader.get(context),
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
         }
         if (!controllerViewState.controlsVisible && skipIndicatorDuration != 0L) {
             SkipIndicator(
@@ -1023,7 +1086,10 @@ fun PlaybackPageContent(
                     markers = markers,
                     streamDecision = currentScene.streamDecision,
                     oCounter = oCount,
-                    playerControls = PlayerControlsImpl(player),
+                    playerControls = PlayerControlsImpl(player, onWillSeekToNext = {
+                        player.pause()
+                        showThumbnail = true
+                    }),
                     onPlaybackActionClick = {
                         when (it) {
                             PlaybackAction.CreateMarker -> {
@@ -1320,8 +1386,10 @@ class PlaybackKeyHandler(
                     // Each repeat is roughly 250-300ms, so repeatCount==2 is ~500-600ms
                     holdActionTriggered = true
                     if (it.key == Key.DirectionUp) {
+                        onWillSeekToPrevious()
                         player.seekToPreviousMediaItem()
                     } else if (it.key == Key.DirectionDown) {
+                        onWillSeekToNext()
                         player.seekToNextMediaItem()
                     }
                 }
@@ -1402,7 +1470,10 @@ class PlaybackKeyHandler(
                 }
 
                 Key.MediaNext -> {
-                    if (player.isCommandAvailable(Player.COMMAND_SEEK_TO_NEXT)) player.seekToNext()
+                    if (player.isCommandAvailable(Player.COMMAND_SEEK_TO_NEXT)) {
+                        onWillSeekToNext()
+                        player.seekToNext()
+                    }
                 }
 
                 Key.MediaPrevious -> {
