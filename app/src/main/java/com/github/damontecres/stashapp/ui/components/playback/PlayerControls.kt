@@ -31,6 +31,7 @@ interface PlayerControls {
 
 class PlayerControlsImpl(
     private val player: Player,
+    private val onWillSeekToNext: () -> Unit = {},
 ) : PlayerControls {
     override val duration: Long
         get() = player.duration
@@ -59,6 +60,7 @@ class PlayerControlsImpl(
     }
 
     override fun seekToNext() {
+        onWillSeekToNext()
         player.seekToNext()
     }
 
