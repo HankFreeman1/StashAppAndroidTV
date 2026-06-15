@@ -44,6 +44,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -671,6 +672,13 @@ fun PlaybackPageContent(
             showRepeatIndicator = false
         }
     }
+    var skipPreviewProgress by remember { mutableFloatStateOf(-1f) }
+    LaunchedEffect(skipPreviewProgress) {
+        if (skipPreviewProgress >= 0f) {
+            delay(1500)
+            skipPreviewProgress = -1f
+        }
+    }
     LaunchedEffect(playbackSpeed) { player.setPlaybackSpeed(playbackSpeed) }
 
     val presentationState = rememberPresentationState(player)
@@ -911,6 +919,8 @@ fun PlaybackPageContent(
     LaunchedEffect(Unit) {
         focusRequester.tryRequestFocus()
     }
+    val density = LocalDensity.current
+    val skipPreviewYOffset = remember(density) { with(density) { 200.dp.toPx().toInt() } }
     val playbackKeyHandler =
         remember {
             PlaybackKeyHandler(
@@ -934,6 +944,12 @@ fun PlaybackPageContent(
                     player.repeatMode =
                         if (repeatOneEnabled) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
                     showRepeatIndicator = true
+                },
+                onSmallJumpComplete = { position ->
+                    val dur = player.duration
+                    if (dur > 0) {
+                        skipPreviewProgress = position.toFloat() / dur.toFloat()
+                    }
                 },
             )
         }
@@ -999,6 +1015,21 @@ fun PlaybackPageContent(
                     )
                 }
             }
+        }
+        if (!controllerViewState.controlsVisible && skipPreviewProgress >= 0f && spriteImageLoaded.isNotEmpty()) {
+            SeekPreviewImage(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopStart)
+                        .offsetByPercent(
+                            xPercentage = skipPreviewProgress,
+                            yOffset = skipPreviewYOffset,
+                        ),
+                imageLoader = SingletonImageLoader.get(context),
+                duration = player.duration,
+                seekProgress = skipPreviewProgress,
+                spriteData = spriteImageLoaded,
+            )
         }
         if (!controllerViewState.controlsVisible && skipIndicatorDuration != 0L) {
             SkipIndicator(
@@ -1368,6 +1399,7 @@ class PlaybackKeyHandler(
     private val onWillSeekToNext: () -> Unit = {},
     private val onWillSeekToPrevious: () -> Unit = {},
     private val onLongPressEnter: () -> Unit = {},
+    private val onSmallJumpComplete: (position: Long) -> Unit = {},
 ) {
     private var keyDownKey: Key? = null
     private var holdActionTriggered = false
@@ -1414,9 +1446,11 @@ class PlaybackKeyHandler(
                 if (skipWithLeftRight && it.key == Key.DirectionLeft) {
                     updateSkipIndicator(-player.seekBackIncrement)
                     player.seekBack()
+                    onSmallJumpComplete(player.currentPosition)
                 } else if (skipWithLeftRight && it.key == Key.DirectionRight) {
                     player.seekForward()
                     updateSkipIndicator(player.seekForwardIncrement)
+                    onSmallJumpComplete(player.currentPosition)
                 } else if (nextWithUpDown && (it.key == Key.DirectionUp || it.key == Key.DirectionDown)) {
                     val wasHeld = keyDownKey == it.key && holdActionTriggered
                     keyDownKey = null
@@ -1462,11 +1496,13 @@ class PlaybackKeyHandler(
                 Key.MediaFastForward, Key.MediaSkipForward -> {
                     player.seekForward()
                     updateSkipIndicator(player.seekForwardIncrement)
+                    onSmallJumpComplete(player.currentPosition)
                 }
 
                 Key.MediaRewind, Key.MediaSkipBackward -> {
                     player.seekBack()
                     updateSkipIndicator(-player.seekBackIncrement)
+                    onSmallJumpComplete(player.currentPosition)
                 }
 
                 Key.MediaNext -> {
