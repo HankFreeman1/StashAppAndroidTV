@@ -11,6 +11,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -688,6 +689,21 @@ fun PlaybackPageContent(
             delay(500)
         }
     }
+    var progressPercent by remember { mutableFloatStateOf(0f) }
+    var bufferPercent by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val dur = player.duration
+            if (dur != C.TIME_UNSET && dur > 0) {
+                progressPercent = player.currentPosition.toFloat() / dur.toFloat()
+                bufferPercent = player.bufferedPosition.toFloat() / dur.toFloat()
+            } else {
+                progressPercent = 0f
+                bufferPercent = 0f
+            }
+            delay(500)
+        }
+    }
     var skipPreviewProgress by remember { mutableFloatStateOf(-1f) }
     LaunchedEffect(skipPreviewProgress) {
         if (skipPreviewProgress >= 0f) {
@@ -1058,21 +1074,6 @@ fun PlaybackPageContent(
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 70.dp),
             )
-            if (showSkipProgress) {
-                currentScene?.item?.duration?.let {
-                    val percent =
-                        skipPosition.toFloat() / (it.toLongMilliseconds).toFloat()
-                    Box(
-                        modifier =
-                            Modifier
-                                .align(Alignment.BottomStart)
-                                .background(MaterialTheme.colorScheme.border)
-                                .clip(RectangleShape)
-                                .height(3.dp)
-                                .fillMaxWidth(percent),
-                    ) {}
-                }
-            }
         }
 
         if (!controllerViewState.controlsVisible && subtitleIndex != null && skipIndicatorDuration == 0L) {
@@ -1160,6 +1161,28 @@ fun PlaybackPageContent(
                         ),
                     )
                 }
+            }
+        }
+
+        if (!controllerViewState.controlsVisible && progressPercent > 0f) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .height(3.dp)
+                    .fillMaxWidth(),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(bufferPercent)
+                        .background(MaterialTheme.colorScheme.border.copy(alpha = 0.5f)),
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(progressPercent)
+                        .background(MaterialTheme.colorScheme.border),
+                )
             }
         }
 
