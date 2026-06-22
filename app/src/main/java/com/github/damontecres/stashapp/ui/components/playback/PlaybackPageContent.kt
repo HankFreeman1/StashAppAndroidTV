@@ -155,6 +155,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -971,6 +972,7 @@ fun PlaybackPageContent(
                 nextWithUpDown = nextWithUpDown,
                 controllerViewState = controllerViewState,
                 updateSkipIndicator = updateSkipIndicator,
+                scope = scope,
                 onWillSeekToNext = {
                     player.pause()
                     showThumbnail = true
@@ -1512,6 +1514,7 @@ class PlaybackKeyHandler(
     private val nextWithUpDown: Boolean,
     private val controllerViewState: ControllerViewState,
     private val updateSkipIndicator: (Long) -> Unit,
+    private val scope: CoroutineScope,
     private val onWillSeekToNext: () -> Unit = {},
     private val onWillSeekToPrevious: () -> Unit = {},
     private val onLongPressEnter: () -> Unit = {},
@@ -1519,6 +1522,36 @@ class PlaybackKeyHandler(
 ) {
     private var keyDownKey: Key? = null
     private var holdActionTriggered = false
+    private var holdJob: Job? = null
+
+    private fun doSkip(key: Key) {
+        if (key == Key.DirectionLeft) {
+            updateSkipIndicator(-player.seekBackIncrement)
+            player.seekBack()
+            onSmallJumpComplete(player.currentPosition)
+        } else {
+            player.seekForward()
+            updateSkipIndicator(player.seekForwardIncrement)
+            onSmallJumpComplete(player.currentPosition)
+        }
+    }
+
+    private fun startHold(key: Key) {
+        holdJob?.cancel()
+        holdJob = scope.launch {
+            delay(500)
+            holdActionTriggered = true
+            while (true) {
+                doSkip(key)
+                delay(300)
+            }
+        }
+    }
+
+    private fun cancelHold() {
+        holdJob?.cancel()
+        holdJob = null
+    }
 
     fun onKeyEvent(it: KeyEvent): Boolean {
         var result = true
@@ -1552,6 +1585,13 @@ class PlaybackKeyHandler(
                     onLongPressEnter()
                 }
                 result = true
+            } else if (skipWithLeftRight && !controllerViewState.controlsVisible && (it.key == Key.DirectionLeft || it.key == Key.DirectionRight)) {
+                if (keyDownKey == null) {
+                    keyDownKey = it.key
+                    holdActionTriggered = false
+                    startHold(it.key)
+                }
+                result = true
             } else {
                 result = false
             }
@@ -1560,13 +1600,17 @@ class PlaybackKeyHandler(
         } else if (isDpad(it)) {
             if (!controllerViewState.controlsVisible) {
                 if (skipWithLeftRight && it.key == Key.DirectionLeft) {
-                    updateSkipIndicator(-player.seekBackIncrement)
-                    player.seekBack()
-                    onSmallJumpComplete(player.currentPosition)
+                    val wasHeld = keyDownKey == it.key && holdActionTriggered
+                    cancelHold()
+                    keyDownKey = null
+                    holdActionTriggered = false
+                    if (!wasHeld) doSkip(it.key)
                 } else if (skipWithLeftRight && it.key == Key.DirectionRight) {
-                    player.seekForward()
-                    updateSkipIndicator(player.seekForwardIncrement)
-                    onSmallJumpComplete(player.currentPosition)
+                    val wasHeld = keyDownKey == it.key && holdActionTriggered
+                    cancelHold()
+                    keyDownKey = null
+                    holdActionTriggered = false
+                    if (!wasHeld) doSkip(it.key)
                 } else if (nextWithUpDown && (it.key == Key.DirectionUp || it.key == Key.DirectionDown)) {
                     val wasHeld = keyDownKey == it.key && holdActionTriggered
                     keyDownKey = null
