@@ -120,6 +120,7 @@ message PlaybackPreferences {
   bool save_play_history = 8;
   bool start_playback_muted = 9;
   Resolution transcode_above_resolution = 10;
+  int32 transcode_above_fps = 22;
   bool video_filters_enabled = 11;
   bool save_video_filters = 12;
   bool debug_logging_enabled = 13;

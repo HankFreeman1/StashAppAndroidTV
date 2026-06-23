@@ -110,6 +110,7 @@ fun PlaybackPage(
                     uiConfig.preferences.playbackPreferences.streamChoice,
                     uiConfig.preferences.playbackPreferences.transcodeAboveResolution,
                     CodecSupport.getSupportedCodecs(uiConfig.preferences.playbackPreferences),
+                    uiConfig.preferences.playbackPreferences.transcodeAboveFps,
                 )
             }
         val media =
@@ -334,6 +335,7 @@ private fun convertToMediaItem(
                 prefs.streamChoice,
                 prefs.transcodeAboveResolution,
                 CodecSupport.getSupportedCodecs(prefs),
+                prefs.transcodeAboveFps,
             )
         return buildMediaItem(context, decision, scene) {
             setTag(PlaylistFragment.MediaItemTag(scene, decision))
@@ -350,6 +352,7 @@ private fun convertToMediaItem(
                 prefs.streamChoice,
                 prefs.transcodeAboveResolution,
                 CodecSupport.getSupportedCodecs(prefs),
+                prefs.transcodeAboveFps,
             )
         val mediaItem =
             buildMediaItem(context, decision, scene) {

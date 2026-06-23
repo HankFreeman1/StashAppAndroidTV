@@ -199,4 +199,10 @@
     </string-array>
     <string name="transcode_options_disabled" translatable="false">Disabled</string>
 
+    <string-array name="transcode_fps_options" translatable="false">
+        <item>@string/transcode_options_disabled</item>
+        <item>30fps</item>
+        <item>60fps</item>
+    </string-array>
+
 </resources>

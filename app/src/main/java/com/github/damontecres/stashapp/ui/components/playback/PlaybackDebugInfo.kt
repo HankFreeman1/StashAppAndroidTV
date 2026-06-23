@@ -55,10 +55,20 @@ fun PlaybackDebugInfo(
     val videoText = if (streamDecision.videoSupported) scene.videoCodec else "${scene.videoCodec} (unsupported)"
     val audioText = if (streamDecision.audioSupported) scene.audioCodec else "${scene.audioCodec} (unsupported)"
     val formatText = if (streamDecision.containerSupported) scene.format else "${scene.format} (unsupported)"
+    val resolutionText = when {
+        scene.videoWidth != null && scene.videoHeight != null -> "${scene.videoWidth}x${scene.videoHeight}"
+        scene.videoHeight != null -> "${scene.videoHeight}p"
+        else -> null
+    }
+    fun formatFps(fps: Double) = if (fps == fps.toLong().toDouble()) fps.toLong().toString() else "%.2f".format(fps).trimEnd('0').trimEnd('.')
+    val sourceFpsText = scene.frameRate?.let { formatFps(it) }
+    val sourceText = listOfNotNull(resolutionText, sourceFpsText?.let { "$it fps" }).joinToString(" @ ").ifEmpty { null }
+    val playbackText = transcodeText
     val rows =
         listOfNotNull(
             TableRow.from(R.string.stashapp_scene_id, scene.id),
-            TableRow.from(R.string.playback, transcodeText),
+            sourceText?.let { TableRow.from("Source", it) },
+            TableRow.from(R.string.playback, playbackText),
             TableRow.from(R.string.stashapp_video_codec, videoText),
             TableRow.from(R.string.stashapp_audio_codec, audioText),
             TableRow.from(R.string.format, formatText),
