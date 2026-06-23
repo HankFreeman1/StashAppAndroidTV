@@ -31,6 +31,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -45,10 +47,16 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Shadow
 import androidx.tv.material3.Icon
+import androidx.tv.material3.Text
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -672,6 +680,14 @@ fun PlaybackPageContent(
             showRepeatIndicator = false
         }
     }
+    var remainingMs by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val dur = player.duration
+            remainingMs = if (dur != C.TIME_UNSET && dur > 0) (dur - player.currentPosition).coerceAtLeast(0L) else 0L
+            delay(500)
+        }
+    }
     var skipPreviewProgress by remember { mutableFloatStateOf(-1f) }
     LaunchedEffect(skipPreviewProgress) {
         if (skipPreviewProgress >= 0f) {
@@ -1094,6 +1110,56 @@ fun PlaybackPageContent(
                     modifier = Modifier.size(80.dp),
                     tint = Color.White.copy(alpha = 0.7f),
                 )
+            }
+        }
+
+        if (!controllerViewState.controlsVisible && (repeatOneEnabled || remainingMs > 0L)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 16.dp, end = 20.dp)
+                    .heightIn(min = 16.dp),
+            ) {
+                if (repeatOneEnabled) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.size(16.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_repeat_one_24),
+                            contentDescription = null,
+                            tint = Color.Black.copy(alpha = 0.7f),
+                            modifier = Modifier
+                                .size(16.dp)
+                                .blur(6.dp, BlurredEdgeTreatment.Unbounded),
+                        )
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_repeat_one_24),
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+                if (remainingMs > 0L) {
+                    val h = (remainingMs / 3_600_000).toInt()
+                    val m = ((remainingMs % 3_600_000) / 60_000).toInt()
+                    val s = ((remainingMs % 60_000) / 1_000).toInt()
+                    val remainingText = if (h > 0) "-%d:%02d:%02d".format(h, m, s) else "-%d:%02d".format(m, s)
+                    Text(
+                        text = remainingText,
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            shadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.7f),
+                                offset = Offset(0f, 0f),
+                                blurRadius = 6f,
+                            ),
+                        ),
+                    )
+                }
             }
         }
 
