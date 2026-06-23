@@ -1,3 +1,24 @@
+## Fork — [@HankFreeman1](https://github.com/HankFreeman1)
+
+This is a maintained fork of [damontecres/StashAppAndroidTV](https://github.com/damontecres/StashAppAndroidTV), tracking upstream closely with the following additions:
+
+**Features**
+- [Add repeat-one mode for single video with long-press center toggle](https://github.com/HankFreeman1/StashAppAndroidTV/commit/d1cede8a)
+- [Add delete scene button to playback controls](https://github.com/HankFreeman1/StashAppAndroidTV/commit/15a60b53)
+- [Show scene thumbnail during buffering in playlist mode](https://github.com/HankFreeman1/StashAppAndroidTV/commit/1b551c17)
+- [Show seek thumbnail on small jump in non-overlay mode](https://github.com/HankFreeman1/StashAppAndroidTV/commit/76da20dc)
+- [Show remaining time and repeat-one indicator in bottom-right corner during playback](https://github.com/HankFreeman1/StashAppAndroidTV/commit/3a748130)
+- [Always show playback progress bar with buffer indicator when overlay is hidden](https://github.com/HankFreeman1/StashAppAndroidTV/commit/a1b1459c)
+- [Show scene title overlay in top-left corner during playback](https://github.com/HankFreeman1/StashAppAndroidTV/commit/bcbd7336)
+- [Long-press left/right d-pad for repeated short skips](https://github.com/HankFreeman1/StashAppAndroidTV/commit/b0fc52b4)
+- [Add FPS threshold for forced transcoding alongside resolution threshold](https://github.com/HankFreeman1/StashAppAndroidTV/commit/5ae03e73)
+
+**Upstream bug workarounds** *(to be removed if/when fixed upstream)*
+- [Fix seek bar unreachable via up arrow in playlist mode](https://github.com/HankFreeman1/StashAppAndroidTV/commit/ee911cdf)
+- [Fix playlist position in debug overlay always showing 1](https://github.com/HankFreeman1/StashAppAndroidTV/commit/8133c6c5)
+
+---
+
 # Stash App for Android TV
 
 This is an Android TV app for browsing images and playing scenes from a [Stash](https://github.com/stashapp/stash) server. Many devices running Android TV are supported, including Amazon Fire TV devices. See [device compatibility](https://github.com/damontecres/StashAppAndroidTV/wiki/Device-Compatibility) for more information.
