@@ -126,11 +126,18 @@
             app:defaultValue="false" />
         <ListPreference
             app:key="@string/pref_key_playback_always_transcode"
-            app:title="Transcode when resolution above"
+            app:title="@string/transcode_above_resolution"
             app:summary="%s"
             app:defaultValue="@string/transcode_options_disabled"
             app:entries="@array/transcode_options"
             app:entryValues="@array/transcode_options"/>
+        <ListPreference
+            app:key="@string/pref_key_playback_always_transcode_fps"
+            app:title="@string/transcode_above_fps"
+            app:summary="%s"
+            app:defaultValue="@string/transcode_options_disabled"
+            app:entries="@array/transcode_fps_options"
+            app:entryValues="@array/transcode_fps_options"/>
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Scene Video Filters">

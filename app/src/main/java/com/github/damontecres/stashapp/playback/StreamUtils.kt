@@ -160,6 +160,7 @@ fun getStreamDecision(
     streamChoice: StreamChoice,
     alwaysTranscodeAbove: Resolution,
     supportedCodecs: CodecSupport = CodecSupport.getSupportedCodecs(context),
+    alwaysTranscodeAboveFps: Int = 0,
 ): StreamDecision {
     Log.d(
         TAG,
@@ -167,16 +168,21 @@ fun getStreamDecision(
             "sceneId=${scene.id}, " +
             "videoCodec=${scene.videoCodec}, " +
             "videoHeight=${scene.videoHeight}, " +
+            "frameRate=${scene.frameRate}, " +
             "audioCodec=${scene.audioCodec}, " +
             "format=${scene.format}, " +
-            "alwaysTranscodeAbove=$alwaysTranscodeAbove",
+            "alwaysTranscodeAbove=$alwaysTranscodeAbove, " +
+            "alwaysTranscodeAboveFps=$alwaysTranscodeAboveFps",
     )
     val videoSupported = supportedCodecs.isVideoSupported(scene.videoCodec)
     val audioSupported = supportedCodecs.isAudioSupported(scene.audioCodec)
     val containerSupported = supportedCodecs.isContainerFormatSupported(scene.format)
 
     val alwaysTranscode =
-        checkIfAlwaysTranscode(scene.videoHeight, scene.streams, streamChoice, alwaysTranscodeAbove)
+        checkIfAlwaysTranscode(
+            listOfNotNull(scene.videoWidth, scene.videoHeight).minOrNull(),
+            scene.frameRate, scene.streams, streamChoice, alwaysTranscodeAbove, alwaysTranscodeAboveFps,
+        )
     Log.d(TAG, "alwaysTranscode=$alwaysTranscode")
     if (mode != PlaybackMode.ForcedDirectPlay &&
         mode !is PlaybackMode.ForcedTranscode &&
@@ -243,40 +249,38 @@ fun getStreamDecision(
 
 fun checkIfAlwaysTranscode(
     videoResolution: Int?,
+    frameRate: Double?,
     streams: Map<String, String>,
     streamChoice: StreamChoice,
     alwaysTarget: Resolution,
+    alwaysTargetFps: Int = 0,
 ): String? {
-    videoResolution ?: return null
     val maxRes =
         when (alwaysTarget) {
             Resolution.UNSPECIFIED,
             Resolution.UNRECOGNIZED,
-            -> return null
-
+            -> null
             Resolution.RES_2160P -> 2160
-
             Resolution.RES_1080P -> 1080
-
             Resolution.RES_720P -> 720
-
             Resolution.RES_480P -> 480
-
             Resolution.RES_240P -> 240
         }
-    if (videoResolution > maxRes) {
-        val regex = Regex("\\((\\d+)p?\\)")
-        val candidateStreams =
-            streams.keys
-                .filter { it.lowercase().startsWith(streamChoice.label.lowercase()) }
-                .mapNotNull { stream ->
-                    regex.find(stream)?.let { Pair(stream, it.groups[1]!!.value.toInt()) }
-                }.sortedByDescending { it.second }
-        val streamKey = candidateStreams.firstOrNull { it.second <= maxRes }?.first
-        return streamKey
-    } else {
-        return null
-    }
+
+    val resolutionExceeded = maxRes != null && videoResolution != null && videoResolution > maxRes
+    val fpsExceeded = alwaysTargetFps > 0 && frameRate != null && frameRate > alwaysTargetFps
+
+    if (!resolutionExceeded && !fpsExceeded) return null
+
+    val targetRes = maxRes ?: videoResolution ?: return null
+    val regex = Regex("\\((\\d+)p?\\)")
+    val candidateStreams =
+        streams.keys
+            .filter { it.lowercase().startsWith(streamChoice.label.lowercase()) }
+            .mapNotNull { stream ->
+                regex.find(stream)?.let { Pair(stream, it.groups[1]!!.value.toInt()) }
+            }.sortedByDescending { it.second }
+    return candidateStreams.firstOrNull { it.second <= targetRes }?.first
 }
 
 fun Caption.displayString(context: Context): String {
@@ -609,4 +613,19 @@ fun getTranscodeAboveFromPreferences(context: Context): Resolution {
                 Resolution.UNSPECIFIED.label,
             )
     return resolutionFromLabel(resolution ?: Resolution.UNSPECIFIED.label)
+}
+
+fun getTranscodeAboveFpsFromPreferences(context: Context): Int {
+    val value =
+        PreferenceManager
+            .getDefaultSharedPreferences(context)
+            .getString(
+                context.getString(R.string.pref_key_playback_always_transcode_fps),
+                null,
+            )
+    return when (value) {
+        "30fps" -> 30
+        "60fps" -> 60
+        else -> 0
+    }
 }

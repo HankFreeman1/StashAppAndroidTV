@@ -154,6 +154,7 @@ val advancedPreferences =
                 StashPreference.StartPlaybackMuted,
                 StashPreference.PlaybackStreamChoice,
                 StashPreference.TranscodeAboveResolution,
+                StashPreference.TranscodeAboveFps,
             ),
         ),
         PreferenceGroup(

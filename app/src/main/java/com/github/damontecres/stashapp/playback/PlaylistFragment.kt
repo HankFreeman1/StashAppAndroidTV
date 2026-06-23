@@ -158,6 +158,7 @@ abstract class PlaylistFragment<T : Query.Data, D : StashData, C : Query.Data> :
                 val scene = convertToScene(item)
                 val streamChoice = getStreamChoiceFromPreferences(requireContext())
                 val transcodeResolution = getTranscodeAboveFromPreferences(requireContext())
+                val transcodeFps = getTranscodeAboveFpsFromPreferences(requireContext())
                 val streamDecision =
                     getStreamDecision(
                         requireContext(),
@@ -165,6 +166,7 @@ abstract class PlaylistFragment<T : Query.Data, D : StashData, C : Query.Data> :
                         PlaybackMode.Choose,
                         streamChoice,
                         transcodeResolution,
+                        alwaysTranscodeAboveFps = transcodeFps,
                     )
                 Log.d(TAG, "streamDecision=$streamDecision")
                 buildMediaItem(requireContext(), streamDecision, scene) {

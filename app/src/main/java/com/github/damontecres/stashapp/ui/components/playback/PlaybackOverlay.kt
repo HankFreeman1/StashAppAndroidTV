@@ -687,6 +687,7 @@ private fun PlaybackOverlayPreview() {
                     videoCodec = "h264",
                     videoWidth = 1920,
                     videoHeight = 1080,
+                    frameRate = null,
                     audioCodec = "aac",
                     format = "mkv",
                     oCounter = 1,

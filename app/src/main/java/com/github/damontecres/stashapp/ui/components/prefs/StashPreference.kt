@@ -1080,6 +1080,36 @@ sealed interface StashPreference<T> {
                 },
             )
 
+        val TranscodeAboveFps =
+            StashChoicePreference<Int>(
+                title = R.string.transcode_above_fps,
+                prefKey = R.string.pref_key_playback_always_transcode_fps,
+                summary = null,
+                defaultValue = 0,
+                displayValues = R.array.transcode_fps_options,
+                indexToValue = { listOf(0, 30, 60).getOrElse(it) { 0 } },
+                valueToIndex = { listOf(0, 30, 60).indexOf(it).coerceAtLeast(0) },
+                getter = { it.playbackPreferences.transcodeAboveFps },
+                setter = { prefs, value ->
+                    prefs.updatePlaybackPreferences { transcodeAboveFps = value }
+                },
+                prefGetter = { context: Context, prefs: SharedPreferences ->
+                    when (prefs.getString(context.getString(R.string.pref_key_playback_always_transcode_fps), null)) {
+                        "30fps" -> 30
+                        "60fps" -> 60
+                        else -> 0
+                    }
+                },
+                prefSetter = { context: Context, editor: SharedPreferences.Editor, value: Int ->
+                    val string = when (value) {
+                        30 -> "30fps"
+                        60 -> "60fps"
+                        else -> context.getString(R.string.transcode_options_disabled)
+                    }
+                    editor.putString(context.getString(R.string.pref_key_playback_always_transcode_fps), string)
+                },
+            )
+
         val VideoFilter =
             StashSwitchPreference(
                 title = R.string.enable_video_filters,
