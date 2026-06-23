@@ -108,6 +108,7 @@ class PlaybackSceneFragment : PlaybackFragment() {
                 }
             val streamChoice = getStreamChoiceFromPreferences(requireContext())
             val transcodeResolution = getTranscodeAboveFromPreferences(requireContext())
+            val transcodeFps = getTranscodeAboveFpsFromPreferences(requireContext())
             Log.d(TAG, "playbackPosition=$playbackPosition, playback.position=${playback.position}")
             val streamDecision =
                 getStreamDecision(
@@ -116,6 +117,7 @@ class PlaybackSceneFragment : PlaybackFragment() {
                     playback.mode,
                     streamChoice,
                     transcodeResolution,
+                    alwaysTranscodeAboveFps = transcodeFps,
                 )
             Log.d(TAG, "streamDecision=$streamDecision")
             updateDebugInfo(streamDecision, scene)
