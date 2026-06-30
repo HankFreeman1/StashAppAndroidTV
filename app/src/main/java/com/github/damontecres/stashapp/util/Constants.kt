@@ -540,6 +540,7 @@ val FullSceneData.asVideoSceneData: VideoSceneData
             ),
             sceneStreams.map { VideoSceneData.SceneStream(it.url, it.mime_type, it.label) },
             captions?.map { VideoSceneData.Caption("", it.caption) },
+            tags.map { VideoSceneData.Tag("", it.tagData.asSlimTagData) },
         )
 
 val FullSceneData.asMinimalSceneData: MinimalSceneData

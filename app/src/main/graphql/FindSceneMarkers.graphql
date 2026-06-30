@@ -76,6 +76,9 @@ fragment VideoSceneData on Scene {
     captions {
         ...Caption
     }
+    tags {
+        ...SlimTagData
+    }
 }
 
 fragment MarkerData on SceneMarker {
