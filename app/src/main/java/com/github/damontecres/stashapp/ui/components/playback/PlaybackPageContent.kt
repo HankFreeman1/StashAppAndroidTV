@@ -56,6 +56,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import androidx.compose.ui.viewinterop.AndroidView
@@ -704,6 +705,15 @@ fun PlaybackPageContent(
             delay(500)
         }
     }
+    val videoExtensions = remember { setOf("mp4", "mkv", "avi", "mov", "wmv", "m4v", "webm", "ts", "flv") }
+    val displayTitle = remember(currentScene) {
+        val title = currentScene?.item?.title?.let { t ->
+            val ext = t.substringAfterLast('.', "").lowercase()
+            if (ext in videoExtensions) t.substringBeforeLast('.') else t
+        } ?: ""
+        val tags = currentScene?.item?.tags?.joinToString(", ") ?: ""
+        listOf(title, tags).filter { it.isNotEmpty() }.joinToString(", ")
+    }
     var skipPreviewProgress by remember { mutableFloatStateOf(-1f) }
     LaunchedEffect(skipPreviewProgress) {
         if (skipPreviewProgress >= 0f) {
@@ -1162,6 +1172,25 @@ fun PlaybackPageContent(
                     )
                 }
             }
+        }
+
+        if (!controllerViewState.controlsVisible && displayTitle.isNotEmpty()) {
+            Text(
+                text = displayTitle,
+                color = Color.White,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.7f),
+                        offset = Offset(0f, 0f),
+                        blurRadius = 6f,
+                    ),
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = 16.dp, start = 20.dp),
+            )
         }
 
         if (!controllerViewState.controlsVisible && progressPercent > 0f) {
