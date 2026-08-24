@@ -9,9 +9,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -200,11 +203,15 @@ fun PlaylistPlaybackPage(
 //    var playlist by remember(pager) { mutableStateOf<List<MediaItem>>(listOf()) }
     val playlist = remember(pager) { mutableStateListOf<MediaItem>() }
     val playlistPager by playlistViewModel.pager.observeAsState()
+    // Survives a stop so the initial fill can reach far enough to resume where playback left off,
+    // which may be well past MAX_PLAYLIST_SIZE
+    var resumeIndex by rememberSaveable(startIndex) { mutableIntStateOf(startIndex) }
     LaunchedEffect(pager) {
+        val fillTo = maxOf(MAX_PLAYLIST_SIZE, resumeIndex + PLAYLIST_PREFETCH)
         val items =
             pager?.let {
                 buildList {
-                    for (i in 0..<(it.size).coerceAtMost(MAX_PLAYLIST_SIZE)) {
+                    for (i in 0..<(it.size).coerceAtMost(fillTo)) {
                         it.getBlocking(i)?.let { item ->
                             add(
                                 convertToMediaItem(
@@ -242,6 +249,7 @@ fun PlaylistPlaybackPage(
                         scope.launch(LoggingCoroutineExceptionHandler(server, scope)) {
                             mutex.withLock {
                                 val currentIndex = player.currentMediaItemIndex
+                                resumeIndex = currentIndex
                                 val count = player.mediaItemCount
                                 pager?.let { pager ->
                                     if (count - currentIndex < PLAYLIST_THRESHOLD && pager.size > count) {

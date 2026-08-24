@@ -634,7 +634,7 @@ fun PlaybackPageContent(
 ) {
     var savedStartPosition by rememberSaveable(startPosition) { mutableLongStateOf(startPosition) }
     var currentPlaylistIndex by rememberSaveable(startIndex) { mutableIntStateOf(startIndex) }
-    if (playlist.isEmpty() || playlist.size < currentPlaylistIndex) {
+    if (playlist.isEmpty() || playlist.size <= currentPlaylistIndex) {
         return
     }
 
@@ -792,7 +792,9 @@ fun PlaybackPageContent(
         )
         viewModel.changeScene(playlist[currentPlaylistIndex].localConfiguration!!.tag as PlaylistFragment.MediaItemTag)
         maybeMuteAudio(uiConfig.preferences, false, player)
-        player.setMediaItems(playlist, startIndex, savedStartPosition)
+        // currentPlaylistIndex starts out as startIndex but survives a stop, so resuming picks up
+        // on the item that was playing rather than restarting the playlist
+        player.setMediaItems(playlist, currentPlaylistIndex, savedStartPosition)
         if (playlistPager == null) {
             player.setupFinishedBehavior(
                 uiConfig.preferences.playbackPreferences.playbackFinishBehavior,
