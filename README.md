@@ -1,3 +1,24 @@
+## Fork — [@HankFreeman1](https://github.com/HankFreeman1)
+
+This is a maintained fork of [damontecres/StashAppAndroidTV](https://github.com/damontecres/StashAppAndroidTV), tracking upstream closely with the following additions:
+
+**Features**
+- [Add repeat-one mode for single video with long-press center toggle](https://github.com/HankFreeman1/StashAppAndroidTV/commit/5b9461ea)
+- [Add delete scene button to playback controls](https://github.com/HankFreeman1/StashAppAndroidTV/commit/f157f747)
+- [Show scene thumbnail during buffering in playlist mode](https://github.com/HankFreeman1/StashAppAndroidTV/commit/fea6725f)
+- [Show seek thumbnail on small jump in non-overlay mode](https://github.com/HankFreeman1/StashAppAndroidTV/commit/90ee1db4)
+- [Show remaining and total time with repeat-one indicator in bottom-right corner during playback](https://github.com/HankFreeman1/StashAppAndroidTV/commit/107ef493)
+- [Always show playback progress bar with buffer indicator when overlay is hidden](https://github.com/HankFreeman1/StashAppAndroidTV/commit/55e9fb62)
+- [Show scene title and tags overlay in top-left corner during playback](https://github.com/HankFreeman1/StashAppAndroidTV/commit/7b634c70)
+- [Long-press left/right d-pad for repeated short skips](https://github.com/HankFreeman1/StashAppAndroidTV/commit/d84ed6b0)
+- [Add FPS threshold for forced transcoding alongside resolution threshold](https://github.com/HankFreeman1/StashAppAndroidTV/commit/48c7c1cf)
+
+**Upstream bug workarounds** *(to be removed if/when fixed upstream)*
+- [Fix playlist position in debug overlay always showing 1](https://github.com/HankFreeman1/StashAppAndroidTV/commit/35518239)
+- [Resume playlist at the video that was playing rather than restarting from the first](https://github.com/HankFreeman1/StashAppAndroidTV/commit/f875b98f)
+
+---
+
 # Stash App for Android TV
 
 This is an Android TV app for browsing images and playing scenes from a [Stash](https://github.com/stashapp/stash) server. Many devices running Android TV are supported, including Amazon Fire TV devices. See [device compatibility](https://github.com/damontecres/StashAppAndroidTV/wiki/Device-Compatibility) for more information.
