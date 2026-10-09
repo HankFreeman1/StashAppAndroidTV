@@ -1577,16 +1577,14 @@ class PlaybackKeyHandler(
     private var holdActionTriggered = false
     private var holdJob: Job? = null
 
-    private fun doSkip(key: Key) {
-        if (key == Key.DirectionLeft) {
-            updateSkipIndicator(-player.seekBackIncrement)
-            player.seekBack()
-            onSmallJumpComplete(player.currentPosition)
-        } else {
-            player.seekForward()
-            updateSkipIndicator(player.seekForwardIncrement)
-            onSmallJumpComplete(player.currentPosition)
-        }
+    private fun doSkip(
+        forward: Boolean,
+        stopBeforeEnd: Boolean = false,
+    ): Long? {
+        val skipped = player.skipWithinVideo(forward, stopBeforeEnd) ?: return null
+        updateSkipIndicator(skipped)
+        onSmallJumpComplete(player.currentPosition)
+        return skipped
     }
 
     private fun startHold(key: Key) {
@@ -1594,8 +1592,8 @@ class PlaybackKeyHandler(
         holdJob = scope.launch {
             delay(500)
             holdActionTriggered = true
-            while (true) {
-                doSkip(key)
+            // Stop at the start/end rather than rolling into the next video, long-press up/down does that
+            while (doSkip(key == Key.DirectionRight, stopBeforeEnd = true) != null) {
                 delay(300)
             }
         }
@@ -1657,13 +1655,13 @@ class PlaybackKeyHandler(
                     cancelHold()
                     keyDownKey = null
                     holdActionTriggered = false
-                    if (!wasHeld) doSkip(it.key)
+                    if (!wasHeld) doSkip(forward = false)
                 } else if (skipWithLeftRight && it.key == Key.DirectionRight) {
                     val wasHeld = keyDownKey == it.key && holdActionTriggered
                     cancelHold()
                     keyDownKey = null
                     holdActionTriggered = false
-                    if (!wasHeld) doSkip(it.key)
+                    if (!wasHeld) doSkip(forward = true)
                 } else if (nextWithUpDown && (it.key == Key.DirectionUp || it.key == Key.DirectionDown)) {
                     val wasHeld = keyDownKey == it.key && holdActionTriggered
                     keyDownKey = null
@@ -1707,15 +1705,11 @@ class PlaybackKeyHandler(
                 }
 
                 Key.MediaFastForward, Key.MediaSkipForward -> {
-                    player.seekForward()
-                    updateSkipIndicator(player.seekForwardIncrement)
-                    onSmallJumpComplete(player.currentPosition)
+                    doSkip(forward = true)
                 }
 
                 Key.MediaRewind, Key.MediaSkipBackward -> {
-                    player.seekBack()
-                    updateSkipIndicator(-player.seekBackIncrement)
-                    onSmallJumpComplete(player.currentPosition)
+                    doSkip(forward = false)
                 }
 
                 Key.MediaNext -> {

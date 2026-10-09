@@ -48,11 +48,11 @@ class PlayerControlsImpl(
     }
 
     override fun seekBack() {
-        player.seekBack()
+        player.skipWithinVideo(forward = false)
     }
 
     override fun seekForward() {
-        player.seekForward()
+        player.skipWithinVideo(forward = true)
     }
 
     override fun seekToPrevious() {
