@@ -63,7 +63,8 @@ fun SkipIndicator(
             modifier = Modifier.align(Alignment.Center),
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 13.sp,
-            text = abs(durationMs / 1000).toString(),
+            // Rounded, since shortened skips near the start/end aren't whole seconds
+            text = ((abs(durationMs) + 500) / 1000).coerceAtLeast(1).toString(),
         )
     }
 }
