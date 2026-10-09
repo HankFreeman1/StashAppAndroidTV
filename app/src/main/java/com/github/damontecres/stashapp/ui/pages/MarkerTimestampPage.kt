@@ -121,6 +121,7 @@ fun MarkerTimestampPage(
                             uiConfig.preferences.playbackPreferences.transcodeAboveResolution,
                             CodecSupport.getSupportedCodecs(uiConfig.preferences.playbackPreferences),
                             uiConfig.preferences.playbackPreferences.transcodeAboveFps,
+                            uiConfig.preferences.playbackPreferences.transcodeWhenHardwareUnsupported,
                         )
                     buildMediaItem(context, streamDecision, scene)
                 }

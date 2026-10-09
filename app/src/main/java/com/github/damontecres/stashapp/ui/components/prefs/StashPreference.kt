@@ -1110,6 +1110,19 @@ sealed interface StashPreference<T> {
                 },
             )
 
+        val TranscodeWhenHardwareUnsupported =
+            StashSwitchPreference(
+                title = R.string.transcode_hardware_unsupported,
+                prefKey = R.string.pref_key_playback_transcode_hardware_unsupported,
+                defaultValue = false,
+                getter = { it.playbackPreferences.transcodeWhenHardwareUnsupported },
+                setter = { prefs, value ->
+                    prefs.updatePlaybackPreferences { transcodeWhenHardwareUnsupported = value }
+                },
+                summaryOn = R.string.transcode_hardware_unsupported_summary_on,
+                summaryOff = R.string.transcode_hardware_unsupported_summary_off,
+            )
+
         val VideoFilter =
             StashSwitchPreference(
                 title = R.string.enable_video_filters,

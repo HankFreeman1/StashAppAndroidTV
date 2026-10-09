@@ -24,6 +24,7 @@ import com.github.damontecres.stashapp.playback.getStreamChoiceFromPreferences
 import com.github.damontecres.stashapp.playback.getStreamDecision
 import com.github.damontecres.stashapp.playback.getTranscodeAboveFromPreferences
 import com.github.damontecres.stashapp.playback.getTranscodeAboveFpsFromPreferences
+import com.github.damontecres.stashapp.playback.getTranscodeWhenHardwareUnsupportedFromPreferences
 import com.github.damontecres.stashapp.ui.playbackPreferencesForOldUi
 import com.github.damontecres.stashapp.util.MutationEngine
 import com.github.damontecres.stashapp.util.StashCoroutineExceptionHandler
@@ -80,6 +81,7 @@ class MarkerPickerFragment : Fragment(R.layout.marker_picker) {
             val streamChoice = getStreamChoiceFromPreferences(requireContext())
             val transcodeResolution = getTranscodeAboveFromPreferences(requireContext())
             val transcodeFps = getTranscodeAboveFpsFromPreferences(requireContext())
+            val transcodeHardware = getTranscodeWhenHardwareUnsupportedFromPreferences(requireContext())
             val scene = Scene.fromVideoSceneData(marker.scene.videoSceneData)
             val streamDecision =
                 getStreamDecision(
@@ -89,6 +91,7 @@ class MarkerPickerFragment : Fragment(R.layout.marker_picker) {
                     streamChoice,
                     transcodeResolution,
                     alwaysTranscodeAboveFps = transcodeFps,
+                    transcodeWhenHardwareUnsupported = transcodeHardware,
                 )
             val mediaItem = buildMediaItem(requireContext(), streamDecision, scene)
 

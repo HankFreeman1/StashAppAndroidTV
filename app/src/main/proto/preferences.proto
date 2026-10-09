@@ -133,6 +133,9 @@ message PlaybackPreferences {
   PlaybackBackend playback_backend = 19;
   bool mobile_touch_gestures = 20;
   MpvPreferences mpv_preferences = 21;
+
+  // Fork-only, numbered high to stay clear of upstream's field numbers
+  bool transcode_when_hardware_unsupported = 1001;
 }
 
 message CachePreferences {
