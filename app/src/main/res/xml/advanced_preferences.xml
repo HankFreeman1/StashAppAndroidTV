@@ -138,6 +138,12 @@
             app:defaultValue="@string/transcode_options_disabled"
             app:entries="@array/transcode_fps_options"
             app:entryValues="@array/transcode_fps_options"/>
+        <SwitchPreference
+            app:key="@string/pref_key_playback_transcode_hardware_unsupported"
+            app:title="@string/transcode_hardware_unsupported"
+            app:summaryOn="@string/transcode_hardware_unsupported_summary_on"
+            app:summaryOff="@string/transcode_hardware_unsupported_summary_off"
+            app:defaultValue="false" />
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Scene Video Filters">

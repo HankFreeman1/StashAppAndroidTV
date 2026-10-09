@@ -161,6 +161,7 @@ fun getStreamDecision(
     alwaysTranscodeAbove: Resolution,
     supportedCodecs: CodecSupport = CodecSupport.getSupportedCodecs(context),
     alwaysTranscodeAboveFps: Int = 0,
+    transcodeWhenHardwareUnsupported: Boolean = false,
 ): StreamDecision {
     Log.d(
         TAG,
@@ -172,17 +173,23 @@ fun getStreamDecision(
             "audioCodec=${scene.audioCodec}, " +
             "format=${scene.format}, " +
             "alwaysTranscodeAbove=$alwaysTranscodeAbove, " +
-            "alwaysTranscodeAboveFps=$alwaysTranscodeAboveFps",
+            "alwaysTranscodeAboveFps=$alwaysTranscodeAboveFps, " +
+            "transcodeWhenHardwareUnsupported=$transcodeWhenHardwareUnsupported",
     )
     val videoSupported = supportedCodecs.isVideoSupported(scene.videoCodec)
     val audioSupported = supportedCodecs.isAudioSupported(scene.audioCodec)
     val containerSupported = supportedCodecs.isContainerFormatSupported(scene.format)
 
     val alwaysTranscode =
-        checkIfAlwaysTranscode(
-            listOfNotNull(scene.videoWidth, scene.videoHeight).minOrNull(),
-            scene.frameRate, scene.streams, streamChoice, alwaysTranscodeAbove, alwaysTranscodeAboveFps,
-        )
+        if (transcodeWhenHardwareUnsupported) {
+            // Overrides the resolution & frame rate thresholds
+            HardwareDecodeSupport.checkIfTranscodeNeeded(scene, streamChoice)
+        } else {
+            checkIfAlwaysTranscode(
+                listOfNotNull(scene.videoWidth, scene.videoHeight).minOrNull(),
+                scene.frameRate, scene.streams, streamChoice, alwaysTranscodeAbove, alwaysTranscodeAboveFps,
+            )
+        }
     Log.d(TAG, "alwaysTranscode=$alwaysTranscode")
     if (mode != PlaybackMode.ForcedDirectPlay &&
         mode !is PlaybackMode.ForcedTranscode &&
@@ -614,6 +621,11 @@ fun getTranscodeAboveFromPreferences(context: Context): Resolution {
             )
     return resolutionFromLabel(resolution ?: Resolution.UNSPECIFIED.label)
 }
+
+fun getTranscodeWhenHardwareUnsupportedFromPreferences(context: Context): Boolean =
+    PreferenceManager
+        .getDefaultSharedPreferences(context)
+        .getBoolean(context.getString(R.string.pref_key_playback_transcode_hardware_unsupported), false)
 
 fun getTranscodeAboveFpsFromPreferences(context: Context): Int {
     val value =

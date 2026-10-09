@@ -155,6 +155,7 @@ val advancedPreferences =
                 StashPreference.PlaybackStreamChoice,
                 StashPreference.TranscodeAboveResolution,
                 StashPreference.TranscodeAboveFps,
+                StashPreference.TranscodeWhenHardwareUnsupported,
             ),
         ),
         PreferenceGroup(

@@ -196,6 +196,9 @@
     <string name="playback_start_muted_summary_on">Manually enable audio track</string>
     <string name="transcode_above_resolution">Transcode when resolution above</string>
     <string name="transcode_above_fps">Transcode when FPS above</string>
+    <string name="transcode_hardware_unsupported">Transcode when unsupported by device hardware</string>
+    <string name="transcode_hardware_unsupported_summary_on">Uses this device\'s video decoders, overriding the resolution &amp; FPS settings</string>
+    <string name="transcode_hardware_unsupported_summary_off">Uses the resolution &amp; FPS settings</string>
     <string name="advanced_settings_summary">Go to advanced settings</string>
     <string name="no_update_available">No update available</string>
     <string name="install_update">Install update</string>
