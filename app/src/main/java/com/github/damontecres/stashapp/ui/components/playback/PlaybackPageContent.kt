@@ -845,19 +845,24 @@ fun PlaybackPageContent(
                                                 current,
                                                 uiConfig.preferences.playbackPreferences,
                                             )
-                                        val newTag =
-                                            newMediaItem.localConfiguration!!.tag as PlaylistFragment.MediaItemTag
-                                        Timber.d(
-                                            "Using new transcoding media item: ${newTag.streamDecision}",
-                                        )
-                                        viewModel.changeScene(newTag)
-                                        player.replaceMediaItem(currentPosition, newMediaItem)
-                                        player.prepare()
-                                        if (savedStartPosition != C.TIME_UNSET) {
-                                            player.seekTo(savedStartPosition)
+                                        if (newMediaItem == null) {
+                                            Timber.w("No transcoded stream to fall back to for scene %s", id)
+                                            true
+                                        } else {
+                                            val newTag =
+                                                newMediaItem.localConfiguration!!.tag as PlaylistFragment.MediaItemTag
+                                            Timber.d(
+                                                "Using new transcoding media item: ${newTag.streamDecision}",
+                                            )
+                                            // Resume where it failed, not where playback started
+                                            val resumePosition = player.currentPosition
+                                            viewModel.changeScene(newTag)
+                                            player.replaceMediaItem(currentPosition, newMediaItem)
+                                            player.prepare()
+                                            player.seekTo(resumePosition)
+                                            player.play()
+                                            false
                                         }
-                                        player.play()
-                                        false
                                     } else {
                                         true
                                     }
