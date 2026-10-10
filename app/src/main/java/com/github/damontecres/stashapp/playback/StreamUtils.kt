@@ -89,7 +89,7 @@ fun buildMediaItem(
     val url =
         when (val decision = streamDecision.transcodeDecision) {
             TranscodeDecision.Transcode -> {
-                scene.streams[format]!!
+                transcodeStreamUrl(scene, streamDecision.streamChoice)
             }
 
             is TranscodeDecision.ForcedTranscode -> {
@@ -98,7 +98,7 @@ fun buildMediaItem(
                     scene.streams[key]!!
                 } else {
                     Log.w(TAG, "Couldn't find $key for scene ${scene.id}")
-                    scene.streams[format]!!
+                    transcodeStreamUrl(scene, streamDecision.streamChoice)
                 }
             }
 
@@ -542,17 +542,50 @@ fun findPossibleTranscodeLabels(
         }
 }
 
+/**
+ * The server only offers the full resolution stream (e.g. "HLS") when the video is within its max transcode size, so
+ * otherwise use the largest one it does offer (e.g. "HLS Full HD (1080p)"). Null if there are none.
+ */
+private fun transcodeStreamLabel(
+    scene: Scene,
+    streamChoice: StreamChoice,
+): String? {
+    val label = streamChoice.label
+    if (label in scene.streams) return label
+    val regex = Regex("\\((\\d+)p?\\)")
+    return scene.streams.keys
+        .filter { it.startsWith(label, ignoreCase = true) }
+        .maxByOrNull { regex.find(it)?.groups?.get(1)?.value?.toIntOrNull() ?: 0 }
+}
+
+/**
+ * The URL of the stream to transcode with, see [transcodeStreamLabel]. Falls back to the direct stream rather than
+ * crashing if the server offers no transcoded stream at all.
+ */
+private fun transcodeStreamUrl(
+    scene: Scene,
+    streamChoice: StreamChoice,
+): String {
+    transcodeStreamLabel(scene, streamChoice)?.let { return scene.streams[it]!! }
+    Log.w(TAG, "No ${streamChoice.label} stream for scene ${scene.id}, using the direct stream")
+    return scene.streamUrl!!
+}
+
+/**
+ * @return the media item switched to transcoding, or null if the server offers no transcoded stream for it
+ */
 fun switchToTranscode(
     context: Context,
     current: MediaItem,
     prefs: PlaybackPreferences,
-): MediaItem {
+): MediaItem? {
     val currScene = (current.localConfiguration!!.tag as PlaylistFragment.MediaItemTag).item
+    val streamLabel = transcodeStreamLabel(currScene, prefs.streamChoice) ?: return null
     val transcodeDecision =
         getStreamDecision(
             context,
             currScene,
-            PlaybackMode.ForcedTranscode(prefs.streamChoice.label),
+            PlaybackMode.ForcedTranscode(streamLabel),
             prefs.streamChoice,
             Resolution.UNSPECIFIED,
             CodecSupport.getSupportedCodecs(prefs),
