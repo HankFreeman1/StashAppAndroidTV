@@ -5,7 +5,12 @@ import android.media.MediaCodecList
 import android.media.MediaFormat
 import android.os.Build
 import android.util.Log
+import androidx.annotation.OptIn
 import androidx.annotation.RequiresApi
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
+import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import com.github.damontecres.stashapp.data.Scene
 import com.github.damontecres.stashapp.proto.StreamChoice
 import kotlin.math.ceil
@@ -122,3 +127,20 @@ object HardwareDecodeSupport {
         return result
     }
 }
+
+/**
+ * Leaves out software video decoders when the device has a hardware one for the type. Otherwise, if the hardware
+ * decoder rejects a video (e.g. 4K just over its rated frame rate), ExoPlayer falls back to the software decoder,
+ * which can't keep up with high resolutions: the video barely renders and the app stops responding. Without that
+ * fallback the decoder error is handled by switching to a transcode instead.
+ */
+@OptIn(UnstableApi::class)
+val hardwareFirstVideoCodecSelector =
+    MediaCodecSelector { mimeType, requiresSecureDecoder, requiresTunnelingDecoder ->
+        val decoders = MediaCodecUtil.getDecoderInfos(mimeType, requiresSecureDecoder, requiresTunnelingDecoder)
+        if (MimeTypes.isVideo(mimeType) && decoders.any { it.hardwareAccelerated }) {
+            decoders.filter { it.hardwareAccelerated }
+        } else {
+            decoders
+        }
+    }

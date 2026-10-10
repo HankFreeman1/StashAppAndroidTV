@@ -18,6 +18,7 @@ import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ts.TsExtractor
 import androidx.preference.PreferenceManager
 import com.github.damontecres.stashapp.StashExoPlayer.Companion.getInstance
+import com.github.damontecres.stashapp.playback.hardwareFirstVideoCodecSelector
 import com.github.damontecres.stashapp.proto.PlaybackBackend
 import com.github.damontecres.stashapp.proto.PlaybackHttpClient
 import com.github.damontecres.stashapp.proto.PlaybackPreferences
@@ -196,6 +197,7 @@ class StashExoPlayer private constructor() {
                         DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory),
                     ).setRenderersFactory(
                         DefaultRenderersFactory(context)
+                            .setMediaCodecSelector(hardwareFirstVideoCodecSelector)
                             .setEnableDecoderFallback(true)
                             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON),
                     ).setSeekBackIncrementMs(skipBack)
