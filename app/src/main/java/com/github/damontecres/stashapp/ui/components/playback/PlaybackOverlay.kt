@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -41,6 +42,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
@@ -49,6 +51,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Format
@@ -489,30 +493,46 @@ fun SeekPreviewImage(
                 val heightPx = with(LocalDensity.current) { height.toPx().toInt() }
                 val widthPx = with(LocalDensity.current) { width.toPx().toInt() }
 
-                AsyncImage(
-                    modifier =
-                        Modifier
-                            .width(width)
-                            .height(height)
-                            .background(Color.Black)
-                            .border(1.5.dp, color = MaterialTheme.colorScheme.border),
-                    model =
-                        ImageRequest
-                            .Builder(context)
-                            .data(s.url)
-                            .memoryCachePolicy(CachePolicy.ENABLED)
-                            .transformations(
-                                CoilPreviewTransformation(
-                                    s,
-                                    widthPx,
-                                    heightPx,
-                                ),
-                            ).build(),
-                    contentScale = ContentScale.None,
-                    imageLoader = imageLoader,
-                    contentDescription = null,
-                    placeholder = placeHolder,
-                )
+                val imageModifier =
+                    Modifier
+                        .width(width)
+                        .height(height)
+                        .background(Color.Black)
+                        .border(1.5.dp, color = MaterialTheme.colorScheme.border)
+                val sheet = SpriteSheetCache.get(s.url)
+                if (sheet != null && s.x + s.w <= sheet.width && s.y + s.h <= sheet.height) {
+                    // Draw the frame straight from the decoded sheet, which keeps up with fast seeking
+                    val painter =
+                        remember(sheet, s) {
+                            BitmapPainter(sheet, IntOffset(s.x, s.y), IntSize(s.w, s.h))
+                        }
+                    Image(
+                        painter = painter,
+                        contentDescription = null,
+                        contentScale = ContentScale.FillBounds,
+                        modifier = imageModifier,
+                    )
+                } else {
+                    AsyncImage(
+                        modifier = imageModifier,
+                        model =
+                            ImageRequest
+                                .Builder(context)
+                                .data(s.url)
+                                .memoryCachePolicy(CachePolicy.ENABLED)
+                                .transformations(
+                                    CoilPreviewTransformation(
+                                        s,
+                                        widthPx,
+                                        heightPx,
+                                    ),
+                                ).build(),
+                        contentScale = ContentScale.None,
+                        imageLoader = imageLoader,
+                        contentDescription = null,
+                        placeholder = placeHolder,
+                    )
+                }
             }
         }
         Text(

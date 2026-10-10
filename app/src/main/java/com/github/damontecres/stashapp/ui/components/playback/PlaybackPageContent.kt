@@ -57,6 +57,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
@@ -98,6 +99,7 @@ import coil3.compose.AsyncImage
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.size.Scale
+import coil3.toBitmap
 import com.github.damontecres.stashapp.R
 import com.github.damontecres.stashapp.StashApplication
 import com.github.damontecres.stashapp.StashExoPlayer
@@ -297,8 +299,13 @@ class PlaybackViewModel :
                         .scale(Scale.FILL)
                         .build()
                 val result = imageLoader.enqueue(request).job.await()
-                if (result.image != null) {
+                val sheet = result.image
+                if (sheet != null) {
                     val spriteImageLoaded = fetchSprites(tag.item.id, tag.item.vttUrl)
+                    // Keyed by the URL the previews use, which is built from the VTT rather than spriteUrl
+                    spriteImageLoaded.map { it.url }.distinct().singleOrNull()?.let {
+                        SpriteSheetCache.put(it, sheet.toBitmap().asImageBitmap())
+                    }
                     _state.update {
                         if (it.mediaItemTag?.item?.id == tag.item.id) {
                             it.copy(spriteImageLoaded = spriteImageLoaded)
