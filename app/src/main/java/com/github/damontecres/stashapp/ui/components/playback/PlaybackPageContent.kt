@@ -879,13 +879,42 @@ fun PlaybackPageContent(
                             }
                         }
                     if (showError) {
+                        // Otherwise the player stays stopped after an error, so every later video in the playlist
+                        // fails too. Retry once from the same spot, then move on to the next video.
+                        val id =
+                            (player.currentMediaItem?.localConfiguration?.tag as? PlaylistFragment.MediaItemTag)
+                                ?.item
+                                ?.id
+                        val message =
+                            if (id != null && id != retriedSceneId) {
+                                retriedSceneId = id
+                                Timber.i("Retrying scene %s after playback error", id)
+                                player.prepare()
+                                player.play()
+                                "Play error, retrying"
+                            } else if (player.repeatMode != Player.REPEAT_MODE_ONE && player.hasNextMediaItem()) {
+                                Timber.i("Skipping scene %s after repeated playback error", id)
+                                player.seekToNextMediaItem()
+                                player.prepare()
+                                player.play()
+                                "Play error, skipping to the next video"
+                            } else {
+                                "Play error"
+                            }
                         Toast
                             .makeText(
                                 context,
-                                "Play error: ${error.localizedMessage}",
+                                "$message: ${error.localizedMessage}",
                                 Toast.LENGTH_LONG,
                             ).show()
                     }
+                }
+
+                // Scene that was already retried after an error, cleared once playback recovers
+                private var retriedSceneId: String? = null
+
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_READY) retriedSceneId = null
                 }
             },
         )
