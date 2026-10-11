@@ -1622,6 +1622,13 @@ fun Player.setupFinishedBehavior(
 
 private const val THUMBNAIL_MIN_SHOW_MS = 1000L
 
+// Press-and-hold left/right: how long until it counts as a hold, the time between steps, and the faster time
+// between steps once it has been held a while
+private const val HOLD_START_MS = 400L
+private const val HOLD_STEP_MS = 200L
+private const val HOLD_RAMP_AFTER_MS = 2000L
+private const val HOLD_FAST_STEP_MS = 100L
+
 // Counted from when the video is ready
 private const val THUMBNAIL_LOAD_TIMEOUT_MS = 3000L
 
@@ -1643,31 +1650,47 @@ class PlaybackKeyHandler(
     private var holdActionTriggered = false
     private var holdJob: Job? = null
 
-    private fun doSkip(
-        forward: Boolean,
-        stopBeforeEnd: Boolean = false,
-    ): Long? {
-        val skipped = player.skipWithinVideo(forward, stopBeforeEnd) ?: return null
+    // Where a press-and-hold has scrubbed to, sought to on release
+    private var scrubPosition: Long? = null
+
+    private fun doSkip(forward: Boolean) {
+        val skipped = player.skipWithinVideo(forward) ?: return
         updateSkipIndicator(skipped)
         onSmallJumpComplete(player.currentPosition)
-        return skipped
     }
 
     private fun startHold(key: Key) {
         holdJob?.cancel()
         holdJob = scope.launch {
-            delay(500)
+            delay(HOLD_START_MS)
             holdActionTriggered = true
+            // Only move the preview while held and seek once on release, so the hold isn't slowed down by (or
+            // restarting a server transcode for) a seek at every step
+            val forward = key == Key.DirectionRight
+            var position = player.currentPosition
+            scrubPosition = position
+            val start = System.currentTimeMillis()
             // Stop at the start/end rather than rolling into the next video, long-press up/down does that
-            while (doSkip(key == Key.DirectionRight, stopBeforeEnd = true) != null) {
-                delay(300)
+            while (true) {
+                val offset = player.skipOffset(forward, position, stopBeforeEnd = true) ?: break
+                position += offset
+                scrubPosition = position
+                updateSkipIndicator(offset)
+                onSmallJumpComplete(position)
+                // Speed up the longer it's held
+                delay(if (System.currentTimeMillis() - start < HOLD_RAMP_AFTER_MS) HOLD_STEP_MS else HOLD_FAST_STEP_MS)
             }
         }
     }
 
-    private fun cancelHold() {
+    private fun endHold() {
         holdJob?.cancel()
         holdJob = null
+        scrubPosition?.let {
+            player.seekTo(it)
+            onSmallJumpComplete(it)
+        }
+        scrubPosition = null
     }
 
     fun onKeyEvent(it: KeyEvent): Boolean {
@@ -1718,13 +1741,13 @@ class PlaybackKeyHandler(
             if (!controllerViewState.controlsVisible) {
                 if (skipWithLeftRight && it.key == Key.DirectionLeft) {
                     val wasHeld = keyDownKey == it.key && holdActionTriggered
-                    cancelHold()
+                    endHold()
                     keyDownKey = null
                     holdActionTriggered = false
                     if (!wasHeld) doSkip(forward = false)
                 } else if (skipWithLeftRight && it.key == Key.DirectionRight) {
                     val wasHeld = keyDownKey == it.key && holdActionTriggered
-                    cancelHold()
+                    endHold()
                     keyDownKey = null
                     holdActionTriggered = false
                     if (!wasHeld) doSkip(forward = true)

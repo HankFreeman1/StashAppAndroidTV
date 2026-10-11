@@ -24,14 +24,28 @@ fun Player.skipWithinVideo(
     forward: Boolean,
     stopBeforeEnd: Boolean = false,
 ): Long? {
+    if (forward && duration == C.TIME_UNSET) {
+        seekForward()
+        return seekForwardIncrement
+    }
+    val offset = skipOffset(forward, currentPosition, stopBeforeEnd) ?: return null
+    seekTo(currentPosition + offset)
+    return offset
+}
+
+/**
+ * The signed distance [skipWithinVideo] would skip from [position], without seeking, so a press-and-hold can
+ * scrub ahead of the player. Null if nothing would be skipped.
+ */
+fun Player.skipOffset(
+    forward: Boolean,
+    position: Long,
+    stopBeforeEnd: Boolean = false,
+): Long? {
     val increment = if (forward) seekForwardIncrement else seekBackIncrement
-    val position = currentPosition
     val remaining =
         if (forward) {
-            if (duration == C.TIME_UNSET) {
-                seekForward()
-                return increment
-            }
+            if (duration == C.TIME_UNSET) return increment
             (duration - position).coerceAtLeast(0L)
         } else {
             position
@@ -45,7 +59,5 @@ fun Player.skipWithinVideo(
             else -> remaining
         }
     if (step <= 0L) return null
-    val offset = if (forward) step else -step
-    seekTo(position + offset)
-    return offset
+    return if (forward) step else -step
 }
