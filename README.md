@@ -1,3 +1,30 @@
+## Fork — [@HankFreeman1](https://github.com/HankFreeman1)
+
+This is a maintained fork of [damontecres/StashAppAndroidTV](https://github.com/damontecres/StashAppAndroidTV), tracking upstream closely with the following additions:
+
+**Features**
+- [Add repeat-one mode for single video with long-press center toggle](https://github.com/HankFreeman1/StashAppAndroidTV/commit/293f8c39)
+- [Add delete scene button to playback controls](https://github.com/HankFreeman1/StashAppAndroidTV/commit/6a8c66c1)
+- [Show scene thumbnail during buffering in playlist mode](https://github.com/HankFreeman1/StashAppAndroidTV/commit/c346b885)
+- [Show seek thumbnail on small jump in non-overlay mode](https://github.com/HankFreeman1/StashAppAndroidTV/commit/c672e788)
+- [Show remaining and total time with repeat-one indicator in bottom-right corner during playback](https://github.com/HankFreeman1/StashAppAndroidTV/commit/2b91c848)
+- [Always show playback progress bar with buffer indicator when overlay is hidden](https://github.com/HankFreeman1/StashAppAndroidTV/commit/9f58fc99)
+- [Show scene title and tags overlay in top-left corner during playback](https://github.com/HankFreeman1/StashAppAndroidTV/commit/c2e61460)
+- [Long-press left/right d-pad for repeated short skips](https://github.com/HankFreeman1/StashAppAndroidTV/commit/d519aba3)
+- [Add FPS threshold for forced transcoding alongside resolution threshold](https://github.com/HankFreeman1/StashAppAndroidTV/commit/ad04acbb)
+- [Halve skips near the start or end of a video so short videos can still be stepped through](https://github.com/HankFreeman1/StashAppAndroidTV/commit/0b20099b)
+- [Add setting to transcode only when the device's hardware decoder can't play the video](https://github.com/HankFreeman1/StashAppAndroidTV/commit/19d23f04)
+- [Recover from playback errors: transcode instead of software decoding, retry once, then skip to the next video](https://github.com/HankFreeman1/StashAppAndroidTV/commit/950c6b2c)
+- [Draw seek previews straight from the decoded sprite sheet so they keep up with fast seeking](https://github.com/HankFreeman1/StashAppAndroidTV/commit/a2443d01)
+- [Scrub the preview on press-and-hold left/right and seek on release, speeding up the longer it's held](https://github.com/HankFreeman1/StashAppAndroidTV/commit/e20e75d6)
+
+**Upstream bug workarounds** *(to be removed if/when fixed upstream)*
+- [Fix playlist position in debug overlay always showing 1](https://github.com/HankFreeman1/StashAppAndroidTV/commit/5bba0e89)
+- [Resume playlist at the video that was playing rather than restarting from the first](https://github.com/HankFreeman1/StashAppAndroidTV/commit/5191895e)
+- [Fix crashes transcoding videos above the server's transcode size](https://github.com/HankFreeman1/StashAppAndroidTV/commit/80a29e0b)
+
+---
+
 # Stash App for Android TV
 
 This is an Android TV app for browsing images and playing scenes from a [Stash](https://github.com/stashapp/stash) server. Many devices running Android TV are supported, including Amazon Fire TV devices. See [device compatibility](https://github.com/damontecres/StashAppAndroidTV/wiki/Device-Compatibility) for more information.
