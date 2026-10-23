@@ -748,8 +748,9 @@ fun PlaybackPageContent(
     LaunchedEffect(playbackSpeed) { player.setPlaybackSpeed(playbackSpeed) }
 
     val presentationState = rememberPresentationState(player)
+    val videoSizeDp = rememberTrackCorrectedVideoSize(player, presentationState.videoSizeDp)
     val scaledModifier =
-        Modifier.resizeWithContentScale(contentScale, presentationState.videoSizeDp)
+        Modifier.resizeWithContentScale(contentScale, videoSizeDp)
 
     var createMarkerPosition by remember { mutableLongStateOf(-1L) }
     var playingBeforeDialog by remember { mutableStateOf(false) }
